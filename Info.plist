@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.4</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleName</key>
+	<string>YTX</string>
+	<key>CFBundleIdentifier</key>
+	<string>YTX</string>
+	<key>CFBundleExecutable</key>
+	<string>YTX</string>
+	<key>CFBundleVersion</key>
+  <string>0.1.0</string>
+	<key>CFBundleShortVersionString</key>
+  <string>0.1.0</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>YTX</string>
+	<key>CFBundleIconFile</key>
+	<string>logo.icns</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleAllowMixedLocalizations</key>
+	<true/>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>YTX Document</string>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>ytx</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>logo.icns</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+	</array>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+</dict>
+</plist>

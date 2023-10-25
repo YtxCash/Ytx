@@ -1,35 +1,47 @@
 #ifndef TABLEMODEL_H
 #define TABLEMODEL_H
 
-#include "tableinfo.h"
-#include "transaction.h"
 #include <QAbstractItemModel>
-#include <QSqlDatabase>
+
+#include "component/enumclass.h"
+#include "component/settings.h"
+#include "component/using.h"
+#include "sql/tablesql.h"
+#include "tableinfo.h"
 
 class TableModel : public QAbstractItemModel {
     Q_OBJECT
 
 public:
-    TableModel(const TableInfo& info, QObject* parent = nullptr);
+    TableModel(const TableInfo* info, TableSql* sql, const Interface* interface, int node_id, bool node_rule, QObject* parent = nullptr);
     ~TableModel();
 
 signals:
-    void SendReCalculate(int node_id);
+    // send to tree model
+    void SUpdateOneTotal(int node_id, double base_debit_diff, double base_credit_diff, double foreign_debit_diff, double foreign_credit_diff);
+    void SSearch();
 
-    void SendUpdate(const Transaction& transaction);
-    void SendRemove(int node_id, int trans_id);
-    void SendCopy(int node_id, const Transaction& transaction);
+    // send to signal station
+    void SAppendOne(Section section, CSPCTrans& trans);
+    void SDeleteOne(Section section, int node_id, int trans_id);
+    void SUpdateBalance(Section section, int node_id, int trans_id);
+    void SMoveMulti(Section section, int old_node_id, int new_node_id, const QList<int>& trans_id_list);
+
+    // send to its table view
+    void SResizeColumnToContents(int column);
 
 public slots:
-    void ReceiveRule(int node_id, bool rule);
+    // receive from table sql
+    void RRemoveMulti(const QMultiHash<int, int>& node_trans);
 
-    void ReceiveUpdate(const Transaction& transaction);
-    void ReceiveRemove(int node_id, int trans_id);
-    void ReceiveCopy(int node_id, const Transaction& transaction);
+    // receive from tree model
+    void RNodeRule(int node_id, bool node_rule);
 
-    void ReceiveReload(int node_id);
-
-    void ReceiveDocument(const QSharedPointer<Transaction>& transaction);
+    // receive from signal station
+    void RAppendOne(CSPCTrans& trans);
+    void RDeleteOne(int node_id, int trans_id);
+    void RUpdateBalance(int node_id, int trans_id);
+    void RMoveMulti(int old_node_id, int new_node_id, const QList<int>& trans_id_list);
 
 public:
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
@@ -48,41 +60,43 @@ public:
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
 public:
-    bool insertRow(int row, const QModelIndex& parent = QModelIndex());
-    bool removeRow(int row, const QModelIndex& parent = QModelIndex());
+    bool AppendOne(const QModelIndex& parent = QModelIndex());
+    bool DeleteOne(int row, const QModelIndex& parent = QModelIndex()); // delete trans and associated transaction
 
 public:
-    int EmptyTransfer() const;
-    int GetRow(int trans_id) const;
-    QSharedPointer<Transaction> GetTransaction(const QModelIndex& index) const;
+    int NodeRow(int node_id) const;
+    QModelIndex TransIndex(int trans_id) const;
+    void UpdateState(Check state);
+    inline SPTrans GetTrans(const QModelIndex& index) const { return trans_list_.at(index.row()); }
 
 private:
-    void CreateTable(int node_id, QList<QSharedPointer<Transaction>>& list);
-    bool InsertRecord(int node_id, QSharedPointer<Transaction>& transaction);
-    bool RemoveRecord(int trans_id);
-    bool UpdateRecord(const QSharedPointer<Transaction>& transaction);
+    // deal with multi transactions
+    bool AppendMulti(int node_id, const QList<int>& trans_id_list);
+    bool RemoveMulti(const QList<int>& trans_id_list); // just remove trnas, keep associated transaction
 
-    bool DBTransaction(auto Function);
+    bool UpdateDateTime(SPTrans& trans, CString& value);
+    bool UpdateDescription(SPTrans& trans, CString& value);
+    bool UpdateCode(SPTrans& trans, CString& value);
+    bool UpdateRelatedNode(SPTrans& trans, int value);
+    bool UpdateState(SPTrans& trans, bool value);
+    bool UpdateDebit(SPTrans& trans, double value);
+    bool UpdateCredit(SPTrans& trans, double value);
+    bool UpdateRatio(SPTrans& trans, double value);
 
-    bool UpdatePostDate(QSharedPointer<Transaction>& transaction, const QDate& value);
-    bool UpdateDescription(QSharedPointer<Transaction>& transaction, const QString& value);
-    bool UpdateTransfer(QSharedPointer<Transaction>& transaction, int new_node_id);
-    bool UpdateStatus(QSharedPointer<Transaction>& transaction, bool status);
-    bool UpdateDebit(QSharedPointer<Transaction>& transaction, double value);
-    bool UpdateCredit(QSharedPointer<Transaction>& transaction, double value);
+    double Balance(bool node_rule, double debit, double credit);
+    void AccumulateBalance(const SPTransList& list, int row, bool node_rule);
 
-    double CalculateBalance(bool rule, double debit, double credit);
-    void AccumulateBalance(QList<QSharedPointer<Transaction>>& list, int row, bool rule);
-
-    void RecycleTransaction(QList<QSharedPointer<Transaction>>& list);
-    void RemoveEmptyTransfer(QList<QSharedPointer<Transaction>>& list);
+    void RecycleTrans(SPTransList& list);
 
 private:
-    QList<QSharedPointer<Transaction>> transaction_list_ {};
+    SPTransList trans_list_ {};
+    TableSql* sql_ {};
 
-    QSqlDatabase db_ {};
-    TableInfo table_info_;
-    QStringList header_ {};
+    const TableInfo* info_ {};
+    const Interface* interface_ {};
+
+    int node_id_ {};
+    bool node_rule_ {};
 };
 
 #endif // TABLEMODEL_H

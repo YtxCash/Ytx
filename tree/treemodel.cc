@@ -1,355 +1,256 @@
 #include "treemodel.h"
-#include "../globalmanager/nodepool.h"
-#include "../globalmanager/sqlconnectionpool.h"
-#include <QDebug>
-#include <QIODevice>
+
 #include <QMimeData>
 #include <QQueue>
-#include <QSqlError>
-#include <QSqlQuery>
+#include <QRegularExpression>
 
-TreeModel::TreeModel(const TreeInfo& tree_info, QObject* parent)
+#include "component/constvalue.h"
+#include "component/enumclass.h"
+#include "global/nodepool.h"
+
+TreeModel::TreeModel(
+    const TreeInfo* info, TreeSql* sql, const SectionRule* section_rule, const ViewHash* sectioon_view, const Interface* interface, QObject* parent)
     : QAbstractItemModel { parent }
-    , tree_info_ { tree_info }
+    , info_ { info }
+    , section_rule_ { section_rule }
+    , section_view_ { sectioon_view }
+    , interface_ { interface }
+    , sql_ { sql }
 {
-    header_ << "Account"
-            << "Id"
-            << "Description"
-            << "Rule"
-            << "Placeholder"
-            << "Total";
+    root_ = NodePool::Instance().Allocate();
+    root_->id = -1;
+    root_->branch = true;
+    root_->unit = section_rule->base_unit;
 
-    root_ = new Node(-1, "root", "", 0.0, false, true);
-    db_ = SqlConnectionPool::Instance().Allocate();
-    CreateTree(node_hash_, leaf_map_);
+    IniTree(node_hash_, leaf_path_, branch_path_);
 }
 
-TreeModel::~TreeModel()
-{
-    delete root_;
-    SqlConnectionPool::Instance().Recycle(db_);
-}
+TreeModel::~TreeModel() { RecycleNode(node_hash_); }
 
-void TreeModel::ReceiveReCalculate(int node_id)
+void TreeModel::UpdateNode(const Node* tmp_node)
 {
-    if (node_id == 0)
+    if (!tmp_node)
         return;
 
-    auto node = GetNode(node_id);
-    if (!node)
+    auto node { node_hash_.value(tmp_node->id) };
+    if (*node == *tmp_node)
         return;
 
-    double old_total = node->total;
-    node->total = CalculateLeafTotal(node_id, node->rule);
-    double difference = node->total - old_total;
+    UpdateBranch(node, tmp_node->branch);
+    UpdateCode(node, tmp_node->code);
+    UpdateDescription(node, tmp_node->description);
+    UpdateNote(node, tmp_node->note);
+    UpdateRule(node, tmp_node->node_rule);
+    UpdateUnit(node, tmp_node->unit);
 
-    CalculatePlaceholderTotal(node, difference);
+    if (node->name != tmp_node->name)
+        UpdateName(node, tmp_node->name);
 }
 
-void TreeModel::ReceiveUpdate(const Node* node)
+void TreeModel::UpdateSeparator(CString& separator)
 {
-    UpdateRecord(node);
+    if (interface_->separator == separator || separator.isEmpty())
+        return;
+
+    for (auto& path : leaf_path_)
+        path.replace(interface_->separator, separator);
+
+    for (auto& path : branch_path_)
+        path.replace(interface_->separator, separator);
 }
 
-bool TreeModel::ReceiveDelete(int node_id)
+bool TreeModel::RRemoveNode(int node_id)
 {
-    QSqlQuery query(db_);
-    const auto part = QString("DELETE FROM %1 WHERE (debit = :node_id OR credit = :node_id) ").arg(tree_info_.node_transaction_table);
-
-    query.prepare(part);
-    query.bindValue(":node_id", node_id);
-    if (!query.exec()) {
-        qWarning() << "Failed to delete record in transaction table" << query.lastError().text();
-        return false;
-    }
+    auto index { GetIndex(node_id) };
+    auto row { index.row() };
+    auto parent_index { index.parent() };
+    RemoveRow(row, parent_index);
 
     return true;
 }
 
-bool TreeModel::ReceiveReplace(int old_node_id, int new_node_id)
+void TreeModel::IniTree(NodeHash& node_hash, StringHash& leaf_path, StringHash& branch_path)
 {
-    QSqlQuery query(db_);
-    const auto part = QString("UPDATE %1 SET "
-                              "debit = CASE WHEN debit = :old_node_id THEN :new_node_id ELSE debit END, "
-                              "credit = CASE WHEN credit = :old_node_id THEN :new_node_id ELSE credit END ")
-                          .arg(tree_info_.node_transaction_table);
+    sql_->Tree(node_hash);
 
-    query.prepare(part);
-    query.bindValue(":new_node_id", new_node_id);
-    query.bindValue(":old_node_id", old_node_id);
-    if (!query.exec()) {
-        qWarning() << "Error in replace setp" << query.lastError().text();
-        return false;
-    }
-
-    return true;
-}
-
-void TreeModel::CreateTree(QHash<int, Node*>& node_hash, QMultiMap<QString, int>& leaf_map)
-{
-    QSqlQuery query_1st(db_);
-    query_1st.setForwardOnly(true);
-    // query_1st.exec("PRAGMA foreign_keys = ON;");
-
-    QSqlQuery query_2nd(db_);
-    query_2nd.setForwardOnly(true);
-    // query_2nd.exec("PRAGMA foreign_keys = ON;");
-
-    const auto part_1st = QString("SELECT "
-                                  "F1.id AS ancestor_id, "
-                                  "F1.name AS ancestor_name, "
-                                  "F1.description AS ancestor_description, "
-                                  "F1.rule AS ancestor_rule, "
-                                  "F1.placeholder AS ancestor_placeholder, "
-                                  "F2.id AS descendant_id, "
-                                  "F2.name AS descendant_name, "
-                                  "F2.description AS descendant_description, "
-                                  "F2.rule AS descendant_rule, "
-                                  "F2.placeholder AS descendant_placeholder "
-                                  "FROM %2 FP "
-                                  "INNER JOIN %1 F1 ON FP.ancestor = F1.id "
-                                  "INNER JOIN %1 F2 ON FP.descendant = F2.id "
-                                  "WHERE FP.distance = 1 ")
-                              .arg(tree_info_.node_table, tree_info_.node_path_table);
-
-    const auto part_2nd = QString("SELECT fp.descendant, f.name, f.description, f.rule, f.placeholder "
-                                  "FROM %2 fp "
-                                  "JOIN %1 f ON fp.descendant = f.id "
-                                  "GROUP BY fp.descendant, f.name "
-                                  "HAVING COUNT(fp.descendant) = 1 ")
-                              .arg(tree_info_.node_table, tree_info_.node_path_table);
-
-    if (!DBTransaction([&]() {
-            query_1st.prepare(part_1st);
-            if (!query_1st.exec()) {
-                qWarning() << "Error in create tree 1 setp " << query_1st.lastError().text();
-                return false;
-            }
-
-            query_2nd.prepare(part_2nd);
-            if (!query_2nd.exec()) {
-                qWarning() << "Error in create tree 2 setp " << query_2nd.lastError().text();
-                return false;
-            }
-
-            return true;
-        })) {
-        qWarning() << "Failed in create tree ";
-        return;
-    }
-
-    CreateNodeHash(query_1st, node_hash);
-    AddIsolatedNode(query_2nd, node_hash);
-
-    for (auto node : qAsConst(node_hash)) {
+    for (auto node : std::as_const(node_hash)) {
         if (!node->parent) {
             node->parent = root_;
             root_->children.emplace_back(node);
         }
     }
 
-    for (auto it = node_hash.begin(); it != node_hash.end(); ++it) {
-        if (!it.value()->placeholder) {
-            int id = it.key();
-            auto node = it.value();
-            bool rule = node->rule;
+    QString path {};
+    for (auto node : std::as_const(node_hash)) {
+        path = CreatePath(node);
 
-            node->total = CalculateLeafTotal(id, rule);
-            CalculatePlaceholderTotal(node, node->total);
-
-            auto path = CreatePathForLeaf(node);
-            leaf_map.insert(path, id);
+        if (node->branch) {
+            branch_path.insert(node->id, path);
+            continue;
         }
+
+        sql_->LeafTotal(node);
+        UpdateBranchTotal(node, node->base_total, node->foreign_total);
+        leaf_path.insert(node->id, path);
     }
+
+    node_hash.insert(-1, root_);
 }
 
-void TreeModel::CreatePathForAll(const QHash<int, Node*>& node_hash, QMultiMap<QString, int>& leaf_map)
+QString TreeModel::CreatePath(const Node* node) const
 {
-    leaf_map.clear();
+    if (!node || node == root_)
+        return QString();
 
-    for (auto it = node_hash.cbegin(); it != node_hash.cend(); ++it) {
-        if (!it.value()->placeholder) {
-            int id = it.key();
-            auto node = it.value();
+    QStringList tmp {};
 
-            auto path = CreatePathForLeaf(node);
-            leaf_map.insert(path, id);
-        }
-    }
-}
-
-QString TreeModel::CreatePathForLeaf(const Node* node)
-{
-    QStringList tmp { node->name };
-
-    while (node->parent != root_) {
-        node = node->parent;
+    while (node != root_) {
         tmp.prepend(node->name);
+        node = node->parent;
     }
 
-    return tmp.join("-");
+    return tmp.join(interface_->separator);
 }
 
-double TreeModel::CalculateLeafTotal(int id, bool rule)
+void TreeModel::UpdateBranchTotal(const Node* node, double base_diff, double foreign_diff)
 {
-    QSqlQuery query_1st(db_);
-    query_1st.setForwardOnly(true);
-    // query_1st.exec("PRAGMA foreign_keys = ON;");
+    if (!node)
+        return;
 
-    QSqlQuery query_2nd(db_);
-    query_2nd.setForwardOnly(true);
-    // query_2nd.exec("PRAGMA foreign_keys = ON;");
+    bool equal {};
+    int unit { node->unit };
+    bool node_rule { node->node_rule };
 
-    const auto part_1st = QString("SELECT ft.amount FROM %1 ft "
-                                  "WHERE debit = (:id) ")
-                              .arg(tree_info_.node_transaction_table);
+    while (node != root_) {
+        equal = node->parent->node_rule == node_rule;
+        node->parent->base_total += equal ? base_diff : -base_diff;
 
-    const auto part_2nd = QString("SELECT ft.amount FROM %1 ft "
-                                  "WHERE credit = (:id) ")
-                              .arg(tree_info_.node_transaction_table);
+        if (node->parent->unit == unit)
+            node->parent->foreign_total += equal ? foreign_diff : -foreign_diff;
 
-    if (!DBTransaction([&]() {
-            query_1st.prepare(part_1st);
-            query_1st.bindValue(":id", id);
-            if (!query_1st.exec()) {
-                qWarning() << "Error in create tree 1 setp " << query_1st.lastError().text();
-                return false;
-            }
-
-            query_2nd.prepare(part_2nd);
-            query_2nd.bindValue(":id", id);
-            if (!query_2nd.exec()) {
-                qWarning() << "Error in create tree 2 setp " << query_2nd.lastError().text();
-                return false;
-            }
-
-            return true;
-        })) {
-        qWarning() << "Failed in create tree ";
-    }
-
-    double total_debit { 0.0 };
-    double total_credit { 0.0 };
-
-    while (query_1st.next()) {
-        total_debit += query_1st.value(0).toDouble();
-    }
-
-    while (query_2nd.next()) {
-        total_credit += query_2nd.value(0).toDouble();
-    }
-
-    return rule ? total_credit - total_debit : total_debit - total_credit;
-}
-
-void TreeModel::CalculatePlaceholderTotal(const Node* node, double value)
-{
-    const bool kEqualRule = node->parent->rule == node->rule;
-    double change = kEqualRule ? value : -value;
-
-    while (node->parent != root_) {
-        node->parent->total += change;
         node = node->parent;
     }
 }
 
-void TreeModel::RecalculateAllTotal(QHash<int, Node*>& node_hash)
+void TreeModel::UpdateLeafUnit(const Node* node, int unit, int value)
 {
-    for (auto it = node_hash.begin(); it != node_hash.end(); ++it) {
-        if (it.value()->placeholder)
-            it.value()->total = 0.0;
+    if (!node || node->branch)
+        return;
+
+    auto minus(node);
+    auto plus(node);
+
+    bool equal {};
+    bool node_rule { node->node_rule };
+    auto foreign_total { node->foreign_total };
+    auto base_unit { section_rule_->base_unit };
+
+    if (unit != base_unit) {
+        while (minus != root_) {
+            if (minus->parent->unit == unit) {
+                equal = minus->parent->node_rule == node_rule;
+                minus->parent->foreign_total -= equal ? foreign_total : -foreign_total;
+            }
+
+            minus = minus->parent;
+        }
     }
 
-    for (auto it = node_hash.begin(); it != node_hash.end(); ++it) {
-        if (!it.value()->placeholder) {
-            int id = it.key();
-            auto node = it.value();
-            bool rule = node->rule;
+    if (value != base_unit) {
+        while (plus != root_) {
+            if (plus->parent->unit == value) {
+                equal = plus->parent->node_rule == node_rule;
+                plus->parent->foreign_total += equal ? foreign_total : -foreign_total;
+            }
 
-            node->total = CalculateLeafTotal(id, rule);
-            CalculatePlaceholderTotal(node, node->total);
+            plus = plus->parent;
         }
     }
 }
 
-bool TreeModel::UsageOfNode(int node_id) const
+bool TreeModel::RUpdateMultiTotal(const QList<int>& node_list)
 {
-    QSqlQuery query(db_);
-    query.setForwardOnly(true);
-    // query.exec("PRAGMA foreign_keys = ON;");
+    double old_base_total {};
+    double old_foreign_total {};
+    double base_diff {};
+    double foreign_diff {};
+    Node* node {};
 
-    const auto string = QString("SELECT COUNT(*) FROM %1 WHERE debit = :node_id OR credit = :node_id ").arg(tree_info_.node_transaction_table);
-    query.prepare(string);
-    query.bindValue(":node_id", node_id);
+    for (const int& node_id : node_list) {
+        node = const_cast<Node*>(GetNode(node_id));
 
-    if (query.exec() && query.next()) {
-        int row = query.value(0).toInt();
-        if (row > 0)
-            return true;
-        else
-            return false;
-    } else {
-        qWarning() << "Failed to count times " << query.lastError().text();
-        return false;
+        if (!node || node->branch)
+            continue;
+
+        old_base_total = node->base_total;
+        old_foreign_total = node->foreign_total;
+
+        sql_->LeafTotal(node);
+
+        base_diff = node->base_total - old_base_total;
+        foreign_diff = node->foreign_total - old_foreign_total;
+
+        UpdateBranchTotal(node, base_diff, foreign_diff);
     }
+
+    emit SUpdateStatusBarSpin();
+    return true;
 }
 
-void TreeModel::CreateNodeHash(QSqlQuery& query, QHash<int, Node*>& node_hash)
+void TreeModel::RUpdateOneTotal(int node_id, double base_debit_diff, double base_credit_diff, double foreign_debit_diff, double foreign_credit_diff)
 {
-    while (query.next()) {
-        int ancestor_id = query.value("ancestor_id").toInt();
-        int descendant_id = query.value("descendant_id").toInt();
+    auto node { const_cast<Node*>(GetNode(node_id)) };
+    auto node_rule { node->node_rule };
 
-        if (!node_hash.contains(ancestor_id)) {
-            auto ancestor = NodePool::Instance().Allocate();
-            ancestor->id = ancestor_id;
-            ancestor->name = query.value("ancestor_name").toString();
-            ancestor->description = query.value("ancestor_description").toString();
-            ancestor->rule = query.value("ancestor_rule").toBool();
-            ancestor->placeholder = query.value("ancestor_placeholder").toBool();
+    auto base_diff { node_rule ? base_credit_diff - base_debit_diff : base_debit_diff - base_credit_diff };
+    auto foreign_diff { node_rule ? foreign_credit_diff - foreign_debit_diff : foreign_debit_diff - foreign_credit_diff };
 
-            node_hash.insert(ancestor_id, ancestor);
-        }
+    node->base_total += base_diff;
+    node->foreign_total += foreign_diff;
 
-        if (!node_hash.contains(descendant_id)) {
-            auto descendant = NodePool::Instance().Allocate();
-            descendant->id = descendant_id;
-            descendant->name = query.value("descendant_name").toString();
-            descendant->description = query.value("descendant_description").toString();
-            descendant->rule = query.value("descendant_rule").toBool();
-            descendant->placeholder = query.value("descendant_placeholder").toBool();
-
-            node_hash.insert(descendant_id, descendant);
-        }
-
-        auto ancestor = node_hash[ancestor_id];
-        auto descendant = node_hash[descendant_id];
-
-        ancestor->children.emplaceBack(descendant);
-        descendant->parent = ancestor;
-    }
+    UpdateBranchTotal(node, base_diff, foreign_diff);
+    emit SUpdateStatusBarSpin();
 }
 
-void TreeModel::AddIsolatedNode(QSqlQuery& query, QHash<int, Node*>& node_hash)
+void TreeModel::UpdateBranchUnit(Node* node) const
 {
-    while (query.next()) {
-        int descendant_id = query.value("descendant").toInt();
-        QString name = query.value("name").toString();
-        QString description = query.value("description").toString();
-        bool rule = query.value("rule").toBool();
-        bool placeholder = query.value("placeholder").toBool();
+    if (!node || !node->branch || node->unit == section_rule_->base_unit)
+        return;
 
-        if (!node_hash.contains(descendant_id)) {
-            auto descendant = NodePool::Instance().Allocate();
-            descendant->id = descendant_id;
-            descendant->name = name;
-            descendant->description = description;
-            descendant->rule = rule;
-            descendant->placeholder = placeholder;
+    QQueue<const Node*> queue {};
+    queue.enqueue(node);
 
-            node_hash.insert(descendant_id, descendant);
+    const Node* queue_node {};
+    double foreign_total {};
+    bool equal {};
+    bool branch {};
+
+    int unit { node->unit };
+    bool node_rule { node->node_rule };
+
+    while (!queue.isEmpty()) {
+        queue_node = queue.dequeue();
+        branch = queue_node->branch;
+
+        if (branch)
+            for (const auto* child : queue_node->children)
+                queue.enqueue(child);
+
+        if (!branch && queue_node->unit == unit) {
+            equal = queue_node->node_rule == node_rule;
+            foreign_total += equal ? queue_node->foreign_total : -queue_node->foreign_total;
         }
     }
+
+    node->foreign_total = foreign_total;
+}
+
+void TreeModel::RecycleNode(NodeHash& node_hash)
+{
+    for (auto node : std::as_const(node_hash))
+        NodePool::Instance().Recycle(node);
+
+    node_hash.clear();
 }
 
 QModelIndex TreeModel::index(int row, int column, const QModelIndex& parent) const
@@ -357,66 +258,62 @@ QModelIndex TreeModel::index(int row, int column, const QModelIndex& parent) con
     if (!hasIndex(row, column, parent))
         return QModelIndex();
 
-    auto parent_node = GetNode(parent);
+    auto parent_node { GetNode(parent) };
+    auto node { parent_node->children.at(row) };
 
-    if (row < 0 || row >= parent_node->children.size())
-        return QModelIndex();
-
-    auto node = parent_node->children.at(row);
-    if (node)
-        return createIndex(row, column, node);
-
-    return QModelIndex();
+    return node ? createIndex(row, column, node) : QModelIndex();
 }
 
 QModelIndex TreeModel::parent(const QModelIndex& index) const
 {
+    // root_'s index is QModelIndex();
+
     if (!index.isValid())
         return QModelIndex();
 
-    auto node = GetNode(index);
+    auto node { GetNode(index) };
     if (node == root_)
         return QModelIndex();
 
-    auto parent_node = node->parent;
+    auto parent_node { node->parent };
     if (parent_node == root_)
         return QModelIndex();
 
-    return createIndex(parent_node->parent->children.indexOf(parent_node), 0,
-        parent_node);
+    return createIndex(parent_node->parent->children.indexOf(parent_node), 0, parent_node);
 }
 
-int TreeModel::rowCount(const QModelIndex& parent) const
-{
-    auto parent_node = GetNode(parent);
-
-    return parent_node->children.size();
-}
+int TreeModel::rowCount(const QModelIndex& parent) const { return GetNode(parent)->children.size(); }
 
 QVariant TreeModel::data(const QModelIndex& index, int role) const
 {
     if (!index.isValid() || role != Qt::DisplayRole)
         return QVariant();
 
-    auto node = GetNode(index);
+    auto node { GetNode(index) };
     if (node == root_)
         return QVariant();
 
-    const int kColumn = index.column();
+    const NodeColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case Tree::kName:
+    case NodeColumn::kName:
         return node->name;
-    case Tree::kID:
+    case NodeColumn::kID:
         return node->id;
-    case Tree::kDescription:
+    case NodeColumn::kCode:
+        return node->code;
+    case NodeColumn::kDescription:
         return node->description;
-    case Tree::kRule:
-        return node->rule;
-    case Tree::kPlaceholder:
-        return node->placeholder;
-    case Tree::kTotal:
-        return QString::number(node->total, 'f', 2);
+    case NodeColumn::kNote:
+        return node->note;
+    case NodeColumn::kNodeRule:
+        return node->node_rule;
+    case NodeColumn::kBranch:
+        return node->branch;
+    case NodeColumn::kUnit:
+        return node->unit;
+    case NodeColumn::kTotal:
+        return node->unit == section_rule_->base_unit ? node->base_total : node->foreign_total;
     default:
         return QVariant();
     }
@@ -427,160 +324,204 @@ bool TreeModel::setData(const QModelIndex& index, const QVariant& value, int rol
     if (!index.isValid() || role != Qt::EditRole)
         return false;
 
-    auto node = GetNode(index);
-    if (node == root_) {
+    auto node { GetNode(index) };
+    if (node == root_)
         return false;
-    }
 
-    const int kColumn = index.column();
-
-    bool pla_changed { false };
-    bool des_changed { false };
-    bool rul_changed { false };
+    const NodeColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case Tree::kDescription:
-        des_changed = UpdateDescription(node, value.toString());
+    case NodeColumn::kDescription:
+        UpdateDescription(node, value.toString());
         break;
-    case Tree::kRule:
-        rul_changed = UpdateRule(node, value.toBool());
+    case NodeColumn::kNote:
+        UpdateNote(node, value.toString());
         break;
-    case Tree::kPlaceholder:
-        pla_changed = UpdatePlaceholder(node, value.toBool());
+    case NodeColumn::kCode:
+        UpdateCode(node, value.toString());
+        break;
+    case NodeColumn::kNodeRule:
+        UpdateRule(node, value.toBool());
+        break;
+    case NodeColumn::kUnit:
+        UpdateUnit(node, value.toInt());
+        break;
+    case NodeColumn::kBranch:
+        UpdateBranch(node, value.toBool());
         break;
     default:
         return false;
     }
 
-    if (pla_changed) {
-        CreatePathForAll(node_hash_, leaf_map_);
-        emit SendLeaf(leaf_map_);
-    }
-
-    if (rul_changed) {
-        node->total = -node->total;
-        if (!node->placeholder) {
-            emit SendRule(node->id, node->rule);
-        }
-    }
-
-    if (pla_changed || des_changed || rul_changed) {
-        UpdateRecord(node);
-    }
-
+    emit SResizeColumnToContents(index.column());
     return true;
 }
 
-bool TreeModel::UpdatePlaceholder(Node* node, const bool& value)
+bool TreeModel::UpdateBranch(Node* node, bool value)
 {
-    if (node->placeholder == value || !node->children.isEmpty() || UsageOfNode(node->id))
+    int node_id { node->id };
+    if (node->branch == value || !node->children.isEmpty() || sql_->Usage(node_id) || section_view_->contains(node_id))
         return false;
 
-    node->placeholder = value;
+    node->branch = value;
+    sql_->Update(BRANCH, value, node_id);
+
+    (node->branch) ? branch_path_.insert(node_id, leaf_path_.take(node_id)) : leaf_path_.insert(node_id, branch_path_.take(node_id));
     return true;
 }
 
-bool TreeModel::UpdateDescription(Node* node, const QString& value)
+bool TreeModel::UpdateDescription(Node* node, CString& value)
 {
     if (node->description == value)
         return false;
 
     node->description = value;
+    sql_->Update(DESCRIPTION, value, node->id);
     return true;
 }
 
-bool TreeModel::UpdateRule(Node* node, const bool& value)
+bool TreeModel::UpdateNote(Node* node, CString& value)
 {
-    if (node->rule == value)
+    if (node->note == value)
         return false;
 
-    node->rule = value;
+    node->note = value;
+    sql_->Update(NOTE, value, node->id);
+    return true;
+}
+
+bool TreeModel::UpdateUnit(Node* node, int value)
+{
+    auto unit { node->unit };
+    if (unit == value)
+        return false;
+
+    node->unit = value;
+    sql_->Update(UNIT, value, node->id);
+
+    (node->branch) ? UpdateBranchUnit(node) : UpdateLeafUnit(node, unit, value);
+    return true;
+}
+
+bool TreeModel::UpdateName(Node* node, CString& value)
+{
+    node->name = value;
+    sql_->Update(NAME, value, node->id);
+
+    UpdatePath(node);
+    emit SResizeColumnToContents(static_cast<int>(NodeColumn::kName));
+    emit SSearch();
+    emit SUpdateName(node);
+    return true;
+}
+
+void TreeModel::UpdatePath(const Node* node)
+{
+    QQueue<const Node*> queue {};
+    queue.enqueue(node);
+
+    const Node* queue_node {};
+    QString path {};
+
+    while (!queue.isEmpty()) {
+        queue_node = queue.dequeue();
+
+        path = CreatePath(queue_node);
+
+        if (queue_node->branch) {
+            for (const auto* child : queue_node->children)
+                queue.enqueue(child);
+
+            branch_path_.insert(queue_node->id, path);
+            continue;
+        }
+
+        leaf_path_.insert(queue_node->id, path);
+    }
+}
+
+bool TreeModel::UpdateRule(Node* node, bool value)
+{
+    if (node->node_rule == value)
+        return false;
+
+    node->node_rule = value;
+    sql_->Update(NODERULE, value, node->id);
+
+    node->base_total = -node->base_total;
+    node->foreign_total = -node->foreign_total;
+    if (!node->branch)
+        emit SNodeRule(node->id, value);
+
+    return true;
+}
+
+bool TreeModel::UpdateCode(Node* node, CString& value)
+{
+    if (node->code == value)
+        return false;
+
+    node->code = value;
+    sql_->Update(CODE, value, node->id);
     return true;
 }
 
 int TreeModel::columnCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return header_.size();
-}
-
-bool TreeModel::UpdateRecord(const Node* node)
-{
-    QSqlQuery query(db_);
-    // query.exec("PRAGMA foreign_keys = ON;");
-
-    int id = node->id;
-    bool rule = node->rule;
-    bool placeholder = node->placeholder;
-    QString description = node->description;
-    QString name = node->name;
-
-    const auto part = QString("UPDATE %1 SET "
-                              "name = :name, "
-                              "description = :description, "
-                              "placeholder = :placeholder, "
-                              "rule = :rule "
-                              "WHERE id = :id ")
-                          .arg(tree_info_.node_table);
-
-    query.prepare(part);
-    query.bindValue(":id", id);
-    query.bindValue(":name", name);
-    query.bindValue(":description", description);
-    query.bindValue(":placeholder", placeholder);
-    query.bindValue(":rule", rule);
-
-    if (!query.exec()) {
-        qWarning() << "Failed to update record: " << query.lastError().text();
-        return false;
-    }
-
-    return true;
+    return info_->header.size();
 }
 
 void TreeModel::sort(int column, Qt::SortOrder order)
 {
-    emit layoutAboutToBeChanged();
-
-    if (column < 0 || column >= header_.size()) {
-        emit layoutChanged();
+    if (column <= -1 || column >= info_->header.size())
         return;
-    }
 
-    auto Compare = [column, order](const auto lhs, const auto rhs) -> bool {
-        switch (column) {
-        case Tree::kName:
+    auto Compare = [column, order](const Node* lhs, const Node* rhs) -> bool {
+        const NodeColumn kColumn { column };
+        switch (kColumn) {
+        case NodeColumn::kName:
             return (order == Qt::AscendingOrder) ? (lhs->name < rhs->name) : (lhs->name > rhs->name);
-        case Tree::kDescription:
+        case NodeColumn::kCode:
+            return (order == Qt::AscendingOrder) ? (lhs->code < rhs->code) : (lhs->code > rhs->code);
+        case NodeColumn::kDescription:
             return (order == Qt::AscendingOrder) ? (lhs->description < rhs->description) : (lhs->description > rhs->description);
-        case Tree::kRule:
-            return (order == Qt::AscendingOrder) ? (lhs->rule < rhs->rule) : (lhs->rule > rhs->rule);
-        case Tree::kPlaceholder:
-            return (order == Qt::AscendingOrder) ? (lhs->placeholder < rhs->placeholder) : (lhs->placeholder > rhs->placeholder);
-        case Tree::kTotal:
-            return (order == Qt::AscendingOrder) ? (lhs->total < rhs->total) : (lhs->total > rhs->total);
+        case NodeColumn::kNote:
+            return (order == Qt::AscendingOrder) ? (lhs->note < rhs->note) : (lhs->note > rhs->note);
+        case NodeColumn::kNodeRule:
+            return (order == Qt::AscendingOrder) ? (lhs->node_rule < rhs->node_rule) : (lhs->node_rule > rhs->node_rule);
+        case NodeColumn::kBranch:
+            return (order == Qt::AscendingOrder) ? (lhs->branch < rhs->branch) : (lhs->branch > rhs->branch);
+        case NodeColumn::kUnit:
+            return (order == Qt::AscendingOrder) ? (lhs->unit < rhs->unit) : (lhs->unit > rhs->unit);
+        case NodeColumn::kTotal:
+            return (order == Qt::AscendingOrder) ? (lhs->base_total < rhs->base_total) : (lhs->base_total > rhs->base_total);
         default:
             return false;
         }
     };
 
+    emit layoutAboutToBeChanged();
     SortIterative(root_, Compare);
-
     emit layoutChanged();
 }
 
 void TreeModel::SortIterative(Node* node, const auto& Compare)
 {
+    if (!node)
+        return;
+
     QQueue<Node*> queue {};
     queue.enqueue(node);
 
+    Node* queue_node {};
+
     while (!queue.isEmpty()) {
-        auto node = queue.dequeue();
+        queue_node = queue.dequeue();
 
-        if (!node->children.isEmpty()) {
-            std::sort(node->children.begin(), node->children.end(), Compare);
-
-            for (auto child : node->children) {
+        if (!queue_node->children.isEmpty()) {
+            std::sort(queue_node->children.begin(), queue_node->children.end(), Compare);
+            for (auto child : queue_node->children) {
                 queue.enqueue(child);
             }
         }
@@ -589,141 +530,76 @@ void TreeModel::SortIterative(Node* node, const auto& Compare)
 
 Node* TreeModel::GetNode(const QModelIndex& index) const
 {
-    if (index.isValid() && index.internalPointer()) {
+    if (index.isValid() && index.internalPointer())
         return static_cast<Node*>(index.internalPointer());
-    } else {
-        return root_;
-    }
+
+    return root_;
 }
 
-Node* TreeModel::GetNode(int node_id) const
+QString TreeModel::Path(int node_id) const
 {
-    if (node_hash_.contains(node_id))
-        return node_hash_.value(node_id);
+    auto path { leaf_path_.value(node_id) };
 
-    return nullptr;
+    if (path.isNull())
+        path = branch_path_.value(node_id);
+
+    return path;
 }
 
-QMultiMap<QString, int> TreeModel::GetLeafMap() const
+QModelIndex TreeModel::GetIndex(int node_id) const
 {
-    return leaf_map_;
-}
+    if (node_id == -1 || !node_hash_.contains(node_id))
+        return QModelIndex();
 
-QString TreeModel::GetLeaf(int node_id) const
-{
-    for (auto it = leaf_map_.cbegin(); it != leaf_map_.cend(); ++it) {
-        if (it.value() == node_id)
-            return it.key();
-    }
-
-    return QString();
+    auto node { node_hash_.value(node_id) };
+    return createIndex(node->parent->children.indexOf(node), 0, node);
 }
 
 bool TreeModel::IsDescendant(Node* lhs, Node* rhs) const
 {
-    if (!lhs || !rhs) {
+    if (!lhs || !rhs || lhs == rhs)
         return false;
-    }
 
-    if (lhs == rhs) {
-        return false;
-    }
-
-    while (lhs && lhs != rhs) {
+    while (lhs && lhs != rhs)
         lhs = lhs->parent;
-    }
 
     return lhs == rhs;
 }
 
-bool TreeModel::insertRow(int row, const QModelIndex& parent, Node* node)
+bool TreeModel::InsertRow(int row, const QModelIndex& parent, Node* node)
 {
-    auto parent_node = GetNode(parent);
+    if (row <= -1)
+        return false;
+
+    auto parent_node { GetNode(parent) };
 
     beginInsertRows(parent, row, row);
-    node->parent = parent_node;
     parent_node->children.insert(row, node);
     endInsertRows();
 
-    InsertRecord(parent_node->id, node);
+    sql_->Insert(parent_node->id, node);
     node_hash_.insert(node->id, node);
 
-    if (node->placeholder)
-        return true;
+    QString path { CreatePath(node) };
+    (node->branch ? branch_path_ : leaf_path_).insert(node->id, path);
 
-    QString path = CreatePathForLeaf(node);
-    leaf_map_.insert(path, node->id);
-    emit SendLeaf(leaf_map_);
-
+    emit SSearch();
     return true;
 }
 
-bool TreeModel::InsertRecord(int parent_id, Node* node)
+bool TreeModel::RemoveRow(int row, const QModelIndex& parent)
 {
-    QSqlQuery query(db_);
-    // query.exec("PRAGMA foreign_keys = ON;");
-
-    const auto part_1st = QString("INSERT INTO %1 (name, description, rule, placeholder) "
-                                  "VALUES (:name, :description, :rule, :placeholder) ")
-                              .arg(tree_info_.node_table);
-    const auto part_2nd = QString("INSERT INTO %1 (ancestor, descendant, distance) "
-                                  "SELECT ancestor, :id, distance + 1 FROM %1 "
-                                  "WHERE descendant = :parent UNION ALL SELECT :id, :id, 0 ")
-                              .arg(tree_info_.node_path_table);
-
-    if (!DBTransaction([&]() {
-            // 插入节点记录
-            query.prepare(part_1st);
-            query.bindValue(":name", node->name);
-            query.bindValue(":description", node->description);
-            query.bindValue(":rule", node->rule);
-            query.bindValue(":placeholder", node->placeholder);
-
-            if (!query.exec()) {
-                qWarning() << "Failed to insert node record: " << query.lastError().text();
-                return false;
-            }
-
-            // 获取最后插入的ID
-            node->id = query.lastInsertId().toInt();
-
-            query.clear();
-
-            // 插入节点路径记录
-            query.prepare(part_2nd);
-            query.bindValue(":id", node->id);
-            query.bindValue(":parent", parent_id);
-
-            if (!query.exec()) {
-                qWarning() << "Failed to insert node_path record: " << query.lastError().text();
-                return false;
-            }
-
-            return true;
-        })) {
-        qWarning() << "Failed to insert record";
-        return false;
-    }
-
-    return true;
-}
-
-bool TreeModel::removeRow(int row, const QModelIndex& parent)
-{
-    if (row < 0)
+    if (row <= -1 || row >= rowCount(parent))
         return false;
 
-    auto parent_node = GetNode(parent);
-    if (row >= parent_node->children.size())
-        return false;
+    auto parent_node { GetNode(parent) };
+    auto node { parent_node->children.at(row) };
 
-    auto node = parent_node->children.at(row);
-    if (!node)
-        return false;
-    int node_id = node->id;
+    int node_id { node->id };
+    bool branch { node->branch };
 
     beginRemoveRows(parent, row, row);
-    if (!node->children.isEmpty()) {
+    if (branch) {
         for (auto child : node->children) {
             child->parent = parent_node;
             parent_node->children.emplace_back(child);
@@ -732,107 +608,24 @@ bool TreeModel::removeRow(int row, const QModelIndex& parent)
     parent_node->children.removeOne(node);
     endRemoveRows();
 
-    RecalculateAllTotal(node_hash_);
+    if (branch) {
+        UpdatePath(node);
+        branch_path_.remove(node_id);
+        sql_->Remove(node_id, true);
+        emit SUpdateName(node);
+    }
+
+    if (!branch) {
+        UpdateBranchTotal(node, -node->base_total, -node->foreign_total);
+        leaf_path_.remove(node_id);
+        sql_->Remove(node_id, false);
+    }
+
+    emit SSearch();
+    emit SResizeColumnToContents(static_cast<int>(NodeColumn::kName));
 
     NodePool::Instance().Recycle(node);
-    RemoveRecord(node_id);
-
     node_hash_.remove(node_id);
-    CreatePathForAll(node_hash_, leaf_map_);
-    emit SendLeaf(leaf_map_);
-
-    return true;
-}
-
-bool TreeModel::RemoveRecord(int id)
-{
-    QSqlQuery query(db_);
-    // query.exec("PRAGMA foreign_keys = ON;");
-
-    const auto part_1st = QString("DELETE FROM %1 WHERE id = :id ").arg(tree_info_.node_table);
-    const auto part_2nd = QString("UPDATE %1 SET distance = distance - 1 "
-                                  "WHERE (descendant IN (SELECT descendant FROM %1 "
-                                  "WHERE ancestor = :id AND ancestor != descendant) AND ancestor IN (SELECT ancestor FROM %1 "
-                                  "WHERE descendant = :id AND ancestor != descendant)) ")
-                              .arg(tree_info_.node_path_table);
-    const auto part_3rd = QString("DELETE FROM %1 WHERE descendant = :id OR ancestor = :id").arg(tree_info_.node_path_table);
-
-    if (!DBTransaction([&]() {
-            query.prepare(part_1st);
-            query.bindValue(":id", id);
-            if (!query.exec()) {
-                qWarning() << "Failed to remove node record 1st step: " << query.lastError().text();
-                return false;
-            }
-
-            query.clear();
-
-            query.prepare(part_2nd);
-            query.bindValue(":id", id);
-            if (!query.exec()) {
-                qWarning() << "Failed to remove node_path record 2nd step: " << query.lastError().text();
-                return false;
-            }
-
-            query.clear();
-
-            query.prepare(part_3rd);
-            query.bindValue(":id", id);
-            if (!query.exec()) {
-                qWarning() << "Failed to remove node_path record 3rd step: " << query.lastError().text();
-                return false;
-            }
-
-            return true;
-        })) {
-        qWarning() << "Failed to remove node";
-        return false;
-    }
-
-    return true;
-}
-
-bool TreeModel::DragRecord(int destination_parent_id, int id)
-{
-    QSqlQuery query(db_);
-    // query.exec("PRAGMA foreign_keys = ON;");
-
-    const auto part_1st = QString("DELETE FROM %1 WHERE (descendant IN (SELECT descendant FROM "
-                                  "%1 WHERE ancestor = :id) AND ancestor IN (SELECT ancestor FROM "
-                                  "%1 WHERE descendant = :id AND ancestor != descendant)) ")
-                              .arg(tree_info_.node_path_table);
-    const auto part_2nd = QString("INSERT INTO  %1 (ancestor, descendant, distance) "
-                                  "SELECT p.ancestor, s.descendant, p.distance + s.distance + 1 "
-                                  "FROM %1 p CROSS JOIN "
-                                  "%1 s WHERE p.descendant = :target_parent AND s.ancestor = :id ")
-                              .arg(tree_info_.node_path_table);
-
-    if (!DBTransaction([&]() {
-            // 第一个查询
-            query.prepare(part_1st);
-            query.bindValue(":id", id);
-
-            if (!query.exec()) {
-                qWarning() << "Failed to drag node_path record 1st step: " << query.lastError().text();
-                return false;
-            }
-
-            query.clear();
-
-            // 第二个查询
-            query.prepare(part_2nd);
-            query.bindValue(":id", id);
-            query.bindValue(":target_parent", destination_parent_id);
-
-            if (!query.exec()) {
-                qWarning() << "Failed to drag node_path record 2nd step: " << query.lastError().text();
-                return false;
-            }
-            return true;
-        })) {
-        qWarning() << "Failed to drag node";
-        return false;
-    }
 
     return true;
 }
@@ -840,7 +633,7 @@ bool TreeModel::DragRecord(int destination_parent_id, int id)
 QVariant TreeModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-        return header_.at(section);
+        return info_->header.at(section);
 
     return QVariant();
 }
@@ -850,22 +643,30 @@ Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
     if (!index.isValid())
         return Qt::NoItemFlags;
 
-    auto flags = QAbstractItemModel::flags(index);
-    const int kColumn = index.column();
+    auto flags { QAbstractItemModel::flags(index) };
+    const NodeColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case Tree::kName:
+    case NodeColumn::kName:
         flags |= Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
         break;
-    case Tree::kDescription:
+    case NodeColumn::kCode:
         flags |= Qt::ItemIsEditable;
         break;
-    case Tree::kRule:
+    case NodeColumn::kDescription:
         flags |= Qt::ItemIsEditable;
         break;
-    case Tree::kPlaceholder:
+    case NodeColumn::kNote:
         flags |= Qt::ItemIsEditable;
         break;
+    case NodeColumn::kNodeRule:
+        flags |= Qt::ItemIsEditable;
+        break;
+    case NodeColumn::kBranch:
+        flags |= Qt::ItemIsEditable;
+        break;
+    case NodeColumn::kUnit:
+        flags |= Qt::ItemIsEditable;
     default:
         break;
     }
@@ -873,35 +674,28 @@ Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
     return flags;
 }
 
-Qt::DropActions TreeModel::supportedDropActions() const
-{
-    return Qt::CopyAction | Qt::MoveAction;
-}
-
-QStringList TreeModel::mimeTypes() const
-{
-    return QStringList() << "node/id";
-}
-
 QMimeData* TreeModel::mimeData(const QModelIndexList& indexes) const
 {
-    auto mime_data = new QMimeData();
+    auto mime_data { new QMimeData() };
     if (indexes.isEmpty())
         return mime_data;
 
-    const auto& first_index = indexes.first();
+    auto first_index = indexes.first();
 
     if (first_index.isValid()) {
-        int id = first_index.sibling(first_index.row(), Tree::kID).data().toInt();
-        mime_data->setData("node/id", QByteArray::number(id));
+        int id { first_index.sibling(first_index.row(), static_cast<int>(NodeColumn::kID)).data().toInt() };
+        mime_data->setData(NODEID, QByteArray::number(id));
     }
 
     return mime_data;
 }
 
-bool TreeModel::canDropMimeData(const QMimeData* data, Qt::DropAction action, int, int, const QModelIndex&) const
+bool TreeModel::canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex&) const
 {
-    return action != Qt::IgnoreAction && data && data->hasFormat("node/id");
+    Q_UNUSED(row);
+    Q_UNUSED(column);
+
+    return action != Qt::IgnoreAction && data && data->hasFormat(NODEID);
 }
 
 bool TreeModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent)
@@ -909,53 +703,39 @@ bool TreeModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int r
     if (!canDropMimeData(data, action, row, column, parent))
         return false;
 
-    auto destination_parent = GetNode(parent);
-    if (!destination_parent->placeholder)
+    auto destination_parent { GetNode(parent) };
+    if (!destination_parent->branch)
         return false;
 
-    int id {};
+    int node_id {};
 
-    auto mime_data = data->data("node/id");
-    if (!mime_data.isEmpty()) {
-        id = QVariant(mime_data).toInt();
-    }
+    if (auto mime { data->data(NODEID) }; !mime.isEmpty())
+        node_id = QVariant(mime).toInt();
 
-    int begin_row = row == -1 ? destination_parent->children.size() : row;
-
-    auto node = GetNode(id);
-    if (node == root_)
+    auto node { const_cast<Node*>(GetNode(node_id)) };
+    if (!node || node->parent == destination_parent || IsDescendant(destination_parent, node))
         return false;
 
-    if (node && node->parent != destination_parent && !IsDescendant(destination_parent, node)) {
-        int source_row = node->parent->children.indexOf(node);
-        auto source_index = createIndex(node->parent->children.indexOf(node), 0, node);
+    auto begin_row { row == -1 ? destination_parent->children.size() : row };
+    auto source_row { node->parent->children.indexOf(node) };
+    auto source_index { createIndex(node->parent->children.indexOf(node), 0, node) };
 
-        if (beginMoveRows(source_index.parent(), source_row, source_row, parent, begin_row)) {
-            node->parent->children.removeAt(source_row);
-            CalculatePlaceholderTotal(node, -node->total);
+    if (beginMoveRows(source_index.parent(), source_row, source_row, parent, begin_row)) {
+        node->parent->children.removeAt(source_row);
+        UpdateBranchTotal(node, -node->base_total, -node->foreign_total);
 
-            destination_parent->children.insert(begin_row, node);
-            node->parent = destination_parent;
-            CalculatePlaceholderTotal(node, node->total);
+        destination_parent->children.insert(begin_row, node);
+        node->parent = destination_parent;
+        UpdateBranchTotal(node, node->base_total, node->foreign_total);
 
-            endMoveRows();
-
-            DragRecord(destination_parent->id, id);
-        }
+        endMoveRows();
     }
 
-    CreatePathForAll(node_hash_, leaf_map_);
-    emit SendLeaf(leaf_map_);
+    sql_->Drag(destination_parent->id, node_id);
+    UpdatePath(node);
+    emit SResizeColumnToContents(static_cast<int>(NodeColumn::kName));
+    emit SSearch();
+    emit SUpdateName(node);
+
     return true;
-}
-
-bool TreeModel::DBTransaction(auto Function)
-{
-    if (db_.transaction() && Function() && db_.commit()) {
-        return true;
-    } else {
-        db_.rollback();
-        qWarning() << "Transaction failed";
-        return false;
-    }
 }

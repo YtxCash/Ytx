@@ -1,28 +1,45 @@
 ﻿#ifndef TREEMODEL_H
 #define TREEMODEL_H
 
-#include "node.h"
-#include "treeinfo.h"
 #include <QAbstractItemModel>
-#include <QSqlDatabase>
+
+#include "component/settings.h"
+#include "component/using.h"
+#include "sql/treesql.h"
+#include "treeinfo.h"
 
 class TreeModel : public QAbstractItemModel {
     Q_OBJECT
 
 public:
-    TreeModel(const TreeInfo& tree_info, QObject* parent = nullptr);
+    TreeModel(const TreeInfo* info, TreeSql* sql, const SectionRule* section_rule, const ViewHash* sectioon_view, const Interface* interface,
+        QObject* parent = nullptr);
     ~TreeModel();
 
 signals:
-    void SendRule(int node_id, bool rule);
-    void SendLeaf(const QMultiMap<QString, int>& leaf_map);
+    // send to associated table model
+    void SNodeRule(int node_id, bool node_rule);
+
+    // send to its view
+    void SResizeColumnToContents(int column);
+
+    // send to search dialog
+    void SSearch();
+
+    // send to mainwindow
+    void SUpdateName(const Node* node);
+    void SUpdateStatusBarSpin();
 
 public slots:
-    void ReceiveReCalculate(int node_id);
-    void ReceiveUpdate(const Node* node);
+    // receive from table sql
+    bool RUpdateMultiTotal(const QList<int>& node_list);
+    bool RRemoveNode(int node_id);
 
-    bool ReceiveDelete(int node_id);
-    bool ReceiveReplace(int old_node_id, int new_node_id);
+    // receive from associated table model
+    void RUpdateOneTotal(int node_id, double base_debit_diff, double base_credit_diff, double foreign_debit_diff, double foreign_credit_diff);
+
+    // receive from all table model
+    void RSearch() { emit SSearch(); }
 
 public:
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
@@ -39,57 +56,64 @@ public:
     void sort(int column, Qt::SortOrder order) override;
     Qt::ItemFlags flags(const QModelIndex& index) const override;
 
-    Qt::DropActions supportedDropActions() const override;
-    QStringList mimeTypes() const override;
+    Qt::DropActions supportedDropActions() const override { return Qt::CopyAction | Qt::MoveAction; }
+    QStringList mimeTypes() const override { return QStringList() << "node/id"; }
+
     QMimeData* mimeData(const QModelIndexList& indexes) const override;
     bool canDropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) const override;
     bool dropMimeData(const QMimeData* data, Qt::DropAction action, int row, int column, const QModelIndex& parent) override;
 
 public:
-    bool insertRow(int row, const QModelIndex& parent, Node* node);
-    bool removeRow(int row, const QModelIndex& parent = QModelIndex());
+    bool InsertRow(int row, const QModelIndex& parent, Node* node);
+    bool RemoveRow(int row, const QModelIndex& parent = QModelIndex());
 
 public:
-    Node* GetNode(int node_id) const;
-    QMultiMap<QString, int> GetLeafMap() const;
-    QString GetLeaf(int node_id) const;
-    bool UsageOfNode(int node_id) const;
+    inline CStringHash* LeafPath() const { return &leaf_path_; }
+    inline CStringHash* BranchPath() const { return &branch_path_; }
+    inline const NodeHash* GetNodeHash() const { return &node_hash_; }
+    inline const Node* GetNode(int node_id) const { return node_hash_.value(node_id, nullptr); }
+
+public:
+    Node* GetNode(const QModelIndex& index) const;
+    QModelIndex GetIndex(int node_id) const;
+    QString Path(int node_id) const;
+
+    void UpdateBranchUnit(Node* node) const;
+    void UpdateSeparator(CString& separator);
+    void UpdateNode(const Node* tmp_node);
 
 private:
-    bool InsertRecord(int parent_id, Node* node);
-    bool RemoveRecord(int id);
-    bool DragRecord(int destination_parent_id, int id);
+    void IniTree(NodeHash& node_hash, StringHash& leaf_path, StringHash& branch_path);
+
+    bool UpdateBranch(Node* node, bool value);
+    bool UpdateRule(Node* node, bool value);
+    bool UpdateCode(Node* node, CString& value);
+    bool UpdateDescription(Node* node, CString& value);
+    bool UpdateNote(Node* node, CString& value);
+    bool UpdateUnit(Node* node, int value);
+    bool UpdateName(Node* node, CString& value);
+
+    void UpdatePath(const Node* node);
+    void UpdateLeafUnit(const Node* node, int unit, int value);
+    void UpdateBranchTotal(const Node* node, double base_diff, double foreign_diff);
     bool IsDescendant(Node* lhs, Node* rhs) const;
 
-    bool UpdatePlaceholder(Node* node, const bool& value);
-    bool UpdateRule(Node* node, const bool& value);
-    bool UpdateDescription(Node* node, const QString& value);
-    bool UpdateRecord(const Node* node);
-
-    void CreateTree(QHash<int, Node*>& node_hash, QMultiMap<QString, int>& leaf_map);
-    void AddIsolatedNode(QSqlQuery& query, QHash<int, Node*>& node_hash);
-    void CreateNodeHash(QSqlQuery& query, QHash<int, Node*>& node_hash);
-    bool DBTransaction(auto Function);
-
+    QString CreatePath(const Node* node) const;
     void SortIterative(Node* node, const auto& Compare);
-
-    void CreatePathForAll(const QHash<int, Node*>& node_hash, QMultiMap<QString, int>& leaf_map);
-    QString CreatePathForLeaf(const Node* node);
-
-    double CalculateLeafTotal(int id, bool rule);
-    void CalculatePlaceholderTotal(const Node* node, double value);
-    void RecalculateAllTotal(QHash<int, Node*>& node_hash);
-
-    Node* GetNode(const QModelIndex& index) const;
+    void RecycleNode(NodeHash& node_hash);
 
 private:
     Node* root_ {};
-    QSqlDatabase db_ {};
-    TreeInfo tree_info_ {};
-    QStringList header_ {};
 
-    QHash<int, Node*> node_hash_ {};
-    QMultiMap<QString, int> leaf_map_ {};
+    const TreeInfo* info_ {};
+    const SectionRule* section_rule_ {};
+    const ViewHash* section_view_ {};
+    const Interface* interface_ {};
+
+    NodeHash node_hash_ {};
+    StringHash leaf_path_ {};
+    StringHash branch_path_ {};
+    TreeSql* sql_ {};
 };
 
 #endif // TREEMODEL_H

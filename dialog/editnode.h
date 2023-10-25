@@ -1,8 +1,9 @@
 #ifndef EDITNODE_H
 #define EDITNODE_H
 
-#include "../tree/node.h"
 #include <QDialog>
+
+#include "component/using.h"
 
 namespace Ui {
 class EditNode;
@@ -12,17 +13,15 @@ class EditNode : public QDialog {
     Q_OBJECT
 
 public:
-    EditNode(Node* node, bool usage, QWidget* parent = nullptr);
+    EditNode(Node* node, CString* separator, CStringHash* unit_hash, bool node_usage, bool view_opened, CString& parent_path, QWidget* parent = nullptr);
     ~EditNode();
 
-signals:
-    void SendUpdate(const Node* node);
-
 private slots:
-    void CustomAccept();
+    void RCustomAccept();
+    void REditName(const QString& arg1);
 
 private:
-    void IniDialog();
+    void IniDialog(CStringHash* currency_map);
     void IniConnect();
     void Data(Node* node);
     void SetData();
@@ -30,7 +29,12 @@ private:
 private:
     Ui::EditNode* ui;
     Node* node_ {};
-    bool usage_ {};
+    CString* separator_ {};
+
+    bool node_usage_ {};
+    bool view_opened_ {};
+    QStringList node_name_list_ {};
+    QString parent_path_ {};
 };
 
 #endif // EDITNODE_H

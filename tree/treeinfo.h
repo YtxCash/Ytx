@@ -1,20 +1,16 @@
 #ifndef TREEINFO_H
 #define TREEINFO_H
 
-#include <QString>
+#include "component/enumclass.h"
+#include "component/using.h"
 
 struct TreeInfo {
-    QString node_table {};
-    QString node_path_table {};
-    QString node_transaction_table {};
+    Section section {};
+    QString node {}; // SQL database node table name, also used as QSettings section name, be carefull with it
+    QStringList header {};
 
-    TreeInfo() = default;
-    TreeInfo(const QString& node_table, const QString& node_path_table, const QString& node_transaction_table)
-        : node_table { node_table }
-        , node_path_table { node_path_table }
-        , node_transaction_table { node_transaction_table }
-    {
-    }
+    StringHash unit_hash {};
+    StringHash unit_symbol_hash {};
 };
 
 #endif // TREEINFO_H

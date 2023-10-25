@@ -1,0 +1,58 @@
+<RCC>
+    <qresource prefix="/theme">
+        <file>theme/Solarized Dark.pdf</file>
+        <file>theme/Solarized Dark.qss</file>
+    </qresource>
+    <qresource prefix="/I18N">
+        <file>I18N/qtbase_zh_CN.qm</file>
+        <file>I18N/ytx_zh_CN.qm</file>
+        <file>I18N/ytx_zh_CN.ts</file>
+    </qresource>
+    <qresource prefix="/logo">
+        <file>logo/logo.icns</file>
+        <file>logo/logo.png</file>
+        <file>logo/logo.ico</file>
+        <file>logo/logo_2048.png</file>
+        <file>logo/logo_4096.png</file>
+    </qresource>
+    <qresource prefix="/solarized_dark">
+        <file>solarized_dark/about.png</file>
+        <file>solarized_dark/append.png</file>
+        <file>solarized_dark/branch-open.png</file>
+        <file>solarized_dark/check.png</file>
+        <file>solarized_dark/close-hover.png</file>
+        <file>solarized_dark/close.png</file>
+        <file>solarized_dark/copy.png</file>
+        <file>solarized_dark/cut.png</file>
+        <file>solarized_dark/edit.png</file>
+        <file>solarized_dark/insert.png</file>
+        <file>solarized_dark/jump.png</file>
+        <file>solarized_dark/paste.png</file>
+        <file>solarized_dark/remove.png</file>
+        <file>solarized_dark/search.png</file>
+        <file>solarized_dark/settings.png</file>
+        <file>solarized_dark/uncheck.png</file>
+        <file>solarized_dark/new.png</file>
+        <file>solarized_dark/open.png</file>
+        <file>solarized_dark/x.png</file>
+        <file>solarized_dark/branch-close.png</file>
+        <file>solarized_dark/down.png</file>
+        <file>solarized_dark/left.png</file>
+        <file>solarized_dark/right.png</file>
+        <file>solarized_dark/up.png</file>
+        <file>solarized_dark/check-disabled.png</file>
+        <file>solarized_dark/uncheck-disabled.png</file>
+        <file>solarized_dark/down-disabled.png</file>
+        <file>solarized_dark/up-disabled.png</file>
+        <file>solarized_dark/left-disabled.png</file>
+        <file>solarized_dark/right-disabled.png</file>
+        <file>solarized_dark/handle-1.png</file>
+        <file>solarized_dark/handle-2.png</file>
+        <file>solarized_dark/check-all.png</file>
+        <file>solarized_dark/check-reverse.png</file>
+        <file>solarized_dark/check-none.png</file>
+        <file>solarized_dark/locate.png</file>
+        <file>solarized_dark/edit2.png</file>
+        <file>solarized_dark/remove2.png</file>
+    </qresource>
+</RCC>

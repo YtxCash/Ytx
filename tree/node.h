@@ -4,40 +4,43 @@
 #include <QList>
 #include <QString>
 
-QT_BEGIN_NAMESPACE
-namespace Tree {
-enum Column {
-    kName,
-    kID,
-    kDescription,
-    kRule,
-    kPlaceholder,
-    kTotal
-};
-}
-QT_END_NAMESPACE
-
 struct Node {
-public:
     Node() = default;
     ~Node();
-    Node(int id, const QString& name, const QString& description, double total, bool rule, bool placeholder);
-    void ResetToDefault();
+    Node(const Node& other) = default;
 
-public:
-    int id { 0 };
+    Node(Node&&) = delete;
+    Node& operator=(const Node&) = delete;
+    Node& operator=(Node&&) = delete;
+
+    static constexpr double tolerance = 1e-9;
+    bool operator==(const Node& other) const noexcept;
+    bool operator!=(const Node& other) const noexcept;
+
+    void Reset();
+
     QString name {};
+    int id {};
+    QString code {};
+    int first_property {};
+    int second_property {};
+    double third_property {};
+    double fourth_property {};
+    bool fifth_property {};
+    bool sixth_property {};
+    int seventh_property {};
+    QString date_time {};
     QString description {};
-    bool rule { false };
-    bool placeholder { false };
-    double total { 0.0 };
+    QString note {};
+    bool node_rule { false };
+    bool branch { false };
+    int unit {};
 
-    Node* parent { nullptr };
+    double final_total {};
+    double initial_total {};
+
+    Node* parent {};
     QList<Node*> children {};
-
-private:
-    Node(const Node& other) = delete;
-    Node& operator=(const Node& other) = delete;
 };
 
 #endif // NODE_H

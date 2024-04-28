@@ -3,6 +3,13 @@
 Hey there! I'm here to introduce you to YTX, a stand-alone software. Think of it as a simpler, clearer version of [GnuCash](https://gnucash.org). It's useful for things like keeping track of money,
 managing warehouses, and staying on top of tasks. Stick around, and I'll walk you through how easy it is to use!
 
+### Catalog
+
+1. [Introduction](#Introduction)
+2. [Family Finances](#FamilyFinances)
+3. [Storage](#Storage)
+4. [Shoes Market Tracking Orders](#ShoesMarketTrackingOrders)
+
 ### Introduction
 
 1. When the database isn't open, you won't be able to access most functions.
@@ -19,7 +26,7 @@ managing warehouses, and staying on top of tasks. Stick around, and I'll walk yo
    1. Mac, `/home/.config/ytx/`, **`cmd + shift + .`** Show hidden folders
    2. Win,`\usr\AppData\Roaming\ytx`
 
-### Family Finances
+### FamilyFinances
 
 Hey everyone! Today, I'll show you how to use YTX for managing your family's finances. It's like having a personal money manager for your home. Let's dive in!
 
@@ -90,7 +97,7 @@ Delete, the item was lost or changed hands
 
 That's all for today's introduction. Next up, I'll dive into task tracking with a focus on Shoes Market Tracking Orders, See you next time!
 
-### Shoes Market Tracking Orders
+### ShoesMarketTrackingOrders
 
 Hello everyone! Today, I'll introduce how **YTX** manages tasks, using the example of tracking Shoes Market Orders to demonstrate the benefits of digitization. You can find videos in Chinese
 [here](https://www.youtube.com/watch?v=onG_KENd5Xk)

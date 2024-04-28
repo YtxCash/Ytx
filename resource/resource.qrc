@@ -19,7 +19,6 @@
         <file>solarized_dark/about.png</file>
         <file>solarized_dark/append.png</file>
         <file>solarized_dark/branch-open.png</file>
-        <file>solarized_dark/check-hover.png</file>
         <file>solarized_dark/check.png</file>
         <file>solarized_dark/close-hover.png</file>
         <file>solarized_dark/close.png</file>
@@ -32,7 +31,6 @@
         <file>solarized_dark/remove.png</file>
         <file>solarized_dark/search.png</file>
         <file>solarized_dark/settings.png</file>
-        <file>solarized_dark/uncheck-hover.png</file>
         <file>solarized_dark/uncheck.png</file>
         <file>solarized_dark/new.png</file>
         <file>solarized_dark/open.png</file>
@@ -46,7 +44,6 @@
         <file>solarized_dark/uncheck-disabled.png</file>
         <file>solarized_dark/down-disabled.png</file>
         <file>solarized_dark/up-disabled.png</file>
-        <file>solarized_dark/general_journey.png</file>
         <file>solarized_dark/left-disabled.png</file>
         <file>solarized_dark/right-disabled.png</file>
         <file>solarized_dark/handle-1.png</file>

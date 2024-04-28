@@ -28,24 +28,24 @@ void RemoveNode::RCustomAccept()
     QString text {};
     QString informative_text {};
 
-    if (ui->rBtnRemoveTrans->isChecked()) {
-        text = tr("Remove Trans");
-        informative_text = tr("Will remove %1 and associated transactions, Sure ?").arg(path);
+    if (ui->rBtnRemoveRecords->isChecked()) {
+        text = tr("Remove Records");
+        informative_text = tr("Are you sure you want to remove %1 and its related records?").arg(path);
     }
 
-    if (ui->rBtnReplaceTrans->isChecked()) {
-        text = tr("Replace Trans");
-        informative_text = tr("In associated transactions, %1 will be replaced with %2, Sure ?").arg(path, ui->comboBox->currentText());
+    if (ui->rBtnReplaceRecords->isChecked()) {
+        text = tr("Replace Records");
+        informative_text = tr("Are you sure you want to replace %1 with %2 in all related records?").arg(path, ui->comboBox->currentText());
     }
 
     msg.setText(text);
     msg.setInformativeText(informative_text);
 
     if (msg.exec() == QMessageBox::Ok) {
-        if (ui->rBtnRemoveTrans->isChecked())
+        if (ui->rBtnRemoveRecords->isChecked())
             emit SRemoveMulti(node_id_);
 
-        if (ui->rBtnReplaceTrans->isChecked()) {
+        if (ui->rBtnReplaceRecords->isChecked()) {
             int new_node_id { ui->comboBox->currentData().toInt() };
             emit SReplaceMulti(node_id_, new_node_id);
         }
@@ -57,9 +57,9 @@ void RemoveNode::RCustomAccept()
 void RemoveNode::IniDialog()
 {
     ui->label->setWordWrap(true);
-    ui->rBtnReplaceTrans->setChecked(true);
+    ui->rBtnReplaceRecords->setChecked(true);
     ui->pBtnCancel->setDefault(true);
-    this->setWindowTitle(tr("Remove Node"));
+    this->setWindowTitle(tr("Remove %1").arg(leaf_path_->value(node_id_)));
 
     auto mainwindow_size { qApp->activeWindow()->size() };
     int width { mainwindow_size.width() * 800 / 1920 };
@@ -88,5 +88,5 @@ void RemoveNode::IniConnect()
 {
     connect(ui->pBtnOk, &QPushButton::clicked, this, &RemoveNode::RCustomAccept, Qt::UniqueConnection);
     connect(ui->pBtnCancel, &QPushButton::clicked, this, &QDialog::reject, Qt::UniqueConnection);
-    connect(ui->rBtnReplaceTrans, &QRadioButton::toggled, ui->comboBox, &QComboBox::setEnabled);
+    connect(ui->rBtnReplaceRecords, &QRadioButton::toggled, ui->comboBox, &QComboBox::setEnabled);
 }

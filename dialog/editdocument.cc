@@ -1,14 +1,14 @@
-#include "originaldocument.h"
+#include "editdocument.h"
 
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QMessageBox>
 
-#include "ui_originaldocument.h"
+#include "ui_editdocument.h"
 
-OriginalDocument::OriginalDocument(Section section, SPTrans& trans, CString& document_dir, QWidget* parent)
+EditDocument::EditDocument(Section section, SPTrans& trans, CString& document_dir, QWidget* parent)
     : QDialog(parent)
-    , ui(new Ui::OriginalDocument)
+    , ui(new Ui::EditDocument)
     , section { section }
     , trans_ { trans }
 {
@@ -19,16 +19,16 @@ OriginalDocument::OriginalDocument(Section section, SPTrans& trans, CString& doc
     document_dir_ = QDir::homePath() + "/" + document_dir;
 }
 
-OriginalDocument::~OriginalDocument()
+EditDocument::~EditDocument()
 {
     delete list_model_;
     delete ui;
 }
 
-void OriginalDocument::on_pBtnAdd_clicked()
+void EditDocument::on_pBtnAdd_clicked()
 {
-    QString filter("*.pdf");
-    auto local_documents { QFileDialog::getOpenFileNames(this, tr("Select Original Document"), document_dir_, filter, nullptr) };
+    QString filter("*.*");
+    auto local_documents { QFileDialog::getOpenFileNames(this, tr("Select Document"), document_dir_, filter, nullptr) };
 
     if (local_documents.isEmpty())
         return;
@@ -45,19 +45,19 @@ void OriginalDocument::on_pBtnAdd_clicked()
     }
 }
 
-void OriginalDocument::on_pBtnRemove_clicked()
+void EditDocument::on_pBtnRemove_clicked()
 {
     auto index { ui->listView->currentIndex() };
     list_model_->removeRow(index.row(), QModelIndex());
 }
 
-void OriginalDocument::RCustomAccept()
+void EditDocument::RCustomAccept()
 {
     *trans_->document = list_model_->stringList();
     accept();
 }
 
-void OriginalDocument::on_listView_doubleClicked(const QModelIndex& index)
+void EditDocument::on_listView_doubleClicked(const QModelIndex& index)
 {
     QString file_path { QDir::homePath() + "/" + index.data().toString() };
     auto file_url { QUrl::fromLocalFile(file_path) };
@@ -69,23 +69,23 @@ void OriginalDocument::on_listView_doubleClicked(const QModelIndex& index)
 
     QMessageBox msg {};
     msg.setIcon(QMessageBox::Critical);
-    msg.setText(tr("Doesn't Exit"));
-    msg.setInformativeText(tr("File doesn't exit, please check again."));
+    msg.setText(tr("Document Not Found"));
+    msg.setInformativeText(tr("Sorry about that, it seems like the document isn't there. Can you give it another look?"));
     msg.exec();
 }
 
-void OriginalDocument::CreateList(CStringList& list)
+void EditDocument::CreateList(CStringList& list)
 {
     list_model_ = new QStringListModel(this);
     list_model_->setStringList(list);
     ui->listView->setModel(list_model_);
 }
 
-void OriginalDocument::IniDialog()
+void EditDocument::IniDialog()
 {
     ui->pBtnOk->setDefault(true);
     ui->listView->setEditTriggers(QAbstractItemView::NoEditTriggers);
-    this->setWindowTitle(tr("Original Document"));
+    this->setWindowTitle(tr("Document"));
 
     auto mainwindow_size { qApp->activeWindow()->size() };
     int width { mainwindow_size.width() * 720 / 1920 };
@@ -93,8 +93,8 @@ void OriginalDocument::IniDialog()
     this->resize(width, height);
 }
 
-void OriginalDocument::IniConnect()
+void EditDocument::IniConnect()
 {
     connect(ui->pBtnCancel, &QPushButton::clicked, this, &QDialog::reject, Qt::UniqueConnection);
-    connect(ui->pBtnOk, &QPushButton::clicked, this, &OriginalDocument::RCustomAccept, Qt::UniqueConnection);
+    connect(ui->pBtnOk, &QPushButton::clicked, this, &EditDocument::RCustomAccept, Qt::UniqueConnection);
 }

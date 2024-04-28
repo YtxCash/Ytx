@@ -64,7 +64,7 @@ void TableModel::RAppendOne(CSPCTrans& trans)
 bool TableModel::AppendOne(const QModelIndex& parent)
 {
     // just register trans this function
-    // while set related node in setData function, register associated transaction to sql_'s transaction_hash_
+    // while set related node in setData function, register related transaction to sql_'s transaction_hash_
     auto row { trans_list_.size() };
     auto trans { sql_->Trans() };
 

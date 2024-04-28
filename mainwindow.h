@@ -151,8 +151,8 @@ private:
 
     void DeleteTrans(QWidget* widget);
     void RemoveNode(QTreeView* view, TreeModel* model);
-    void RemoveAssociatedView(TreeModel* model, const QModelIndex& index, int node_id);
-    void RemoveBranchMsg(TreeModel* model, const QModelIndex& index);
+    void RemoveView(TreeModel* model, const QModelIndex& index, int node_id);
+    void RemoveBranch(TreeModel* model, const QModelIndex& index, int node_id);
 
     void UpdateInterface(const Interface& interface);
     void UpdateStatusBar();
@@ -175,7 +175,7 @@ private:
 
     template <typename T>
         requires InheritQAbstractItemView<T>
-    void Free(T*& view);
+    void FreeView(T*& view);
 
     template <typename T>
         requires InheritQWidget<T>

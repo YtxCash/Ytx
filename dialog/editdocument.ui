@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>OriginalDocument</class>
- <widget class="QDialog" name="OriginalDocument">
+ <class>EditDocument</class>
+ <widget class="QDialog" name="EditDocument">
   <property name="geometry">
    <rect>
     <x>0</x>
@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Dialog</string>
+   <string/>
   </property>
   <layout class="QGridLayout" name="gridLayout">
    <item row="2" column="3" colspan="2">
@@ -34,13 +34,6 @@
     <widget class="QPushButton" name="pBtnRemove">
      <property name="text">
       <string>Remove</string>
-     </property>
-    </widget>
-   </item>
-   <item row="3" column="0">
-    <widget class="QPushButton" name="pBtnHelp">
-     <property name="text">
-      <string>&amp;Help</string>
      </property>
     </widget>
    </item>

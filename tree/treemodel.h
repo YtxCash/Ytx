@@ -17,7 +17,7 @@ public:
     ~TreeModel();
 
 signals:
-    // send to associated table model
+    // send to related table model
     void SNodeRule(int node_id, bool node_rule);
 
     // send to its view
@@ -35,7 +35,7 @@ public slots:
     bool RUpdateMultiTotal(const QList<int>& node_list);
     bool RRemoveNode(int node_id);
 
-    // receive from associated table model
+    // receive from related table model
     void RUpdateOneTotal(int node_id, double base_debit_diff, double base_credit_diff, double foreign_debit_diff, double foreign_credit_diff);
 
     // receive from all table model

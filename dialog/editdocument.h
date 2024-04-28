@@ -1,5 +1,5 @@
-#ifndef ORIGINALDOCUMENT_H
-#define ORIGINALDOCUMENT_H
+#ifndef EDITDOCUMENT_H
+#define EDITDOCUMENT_H
 
 #include <QDialog>
 #include <QStringListModel>
@@ -8,15 +8,15 @@
 #include "component/using.h"
 
 namespace Ui {
-class OriginalDocument;
+class EditDocument;
 }
 
-class OriginalDocument : public QDialog {
+class EditDocument : public QDialog {
     Q_OBJECT
 
 public:
-    OriginalDocument(Section section, SPTrans& trans, CString& document_dir, QWidget* parent = nullptr);
-    ~OriginalDocument();
+    explicit EditDocument(Section section, SPTrans& trans, CString& document_dir, QWidget* parent = nullptr);
+    ~EditDocument();
 
 private slots:
     void on_pBtnAdd_clicked();
@@ -30,11 +30,11 @@ private:
     void IniConnect();
 
 private:
-    Ui::OriginalDocument* ui;
+    Ui::EditDocument* ui;
     Section section {};
     SPTrans trans_ {};
     QStringListModel* list_model_ {};
     QString document_dir_ {};
 };
 
-#endif // ORIGINALDOCUMENT_H
+#endif // EDITDOCUMENT_H

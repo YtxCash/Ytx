@@ -61,7 +61,7 @@ public:
 
 public:
     bool AppendOne(const QModelIndex& parent = QModelIndex());
-    bool DeleteOne(int row, const QModelIndex& parent = QModelIndex()); // delete trans and associated transaction
+    bool DeleteOne(int row, const QModelIndex& parent = QModelIndex()); // delete trans and related transaction
 
 public:
     int NodeRow(int node_id) const;
@@ -72,7 +72,7 @@ public:
 private:
     // deal with multi transactions
     bool AppendMulti(int node_id, const QList<int>& trans_id_list);
-    bool RemoveMulti(const QList<int>& trans_id_list); // just remove trnas, keep associated transaction
+    bool RemoveMulti(const QList<int>& trans_id_list); // just remove trnas, keep related transaction
 
     bool UpdateDateTime(SPTrans& trans, CString& value);
     bool UpdateDescription(SPTrans& trans, CString& value);

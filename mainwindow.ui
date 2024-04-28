@@ -195,10 +195,10 @@
      <string>Edit</string>
     </property>
     <addaction name="actionInsert"/>
-    <addaction name="actionRemove"/>
-    <addaction name="separator"/>
     <addaction name="actionAppend"/>
     <addaction name="actionEdit"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove"/>
     <addaction name="separator"/>
     <addaction name="actionJump"/>
     <addaction name="separator"/>
@@ -219,10 +219,10 @@
     <bool>false</bool>
    </attribute>
    <addaction name="actionInsert"/>
-   <addaction name="actionRemove"/>
-   <addaction name="separator"/>
    <addaction name="actionAppend"/>
    <addaction name="actionEdit"/>
+   <addaction name="separator"/>
+   <addaction name="actionRemove"/>
    <addaction name="separator"/>
    <addaction name="actionCheckAll"/>
    <addaction name="actionCheckReverse"/>

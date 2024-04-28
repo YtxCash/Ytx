@@ -22,8 +22,8 @@
 #include "delegate/tree/plaintext.h"
 #include "delegate/tree/treevalue.h"
 #include "dialog/about.h"
+#include "dialog/editdocument.h"
 #include "dialog/editnode.h"
-#include "dialog/originaldocument.h"
 #include "dialog/preferences.h"
 #include "dialog/removenode.h"
 #include "dialog/search.h"
@@ -489,13 +489,13 @@ void MainWindow::RemoveNode(QTreeView* view, TreeModel* model)
         if (node->children.isEmpty())
             model->RemoveRow(index.row(), index.parent());
         else
-            RemoveBranchMsg(model, index);
+            RemoveBranch(model, index, node_id);
 
         return;
     }
 
     if (!section_data_->tree_sql.Usage(node_id)) {
-        RemoveAssociatedView(model, index, node_id);
+        RemoveView(model, index, node_id);
         return;
     }
 
@@ -535,13 +535,13 @@ void MainWindow::DeleteTrans(QWidget* widget)
     }
 }
 
-void MainWindow::RemoveAssociatedView(TreeModel* model, const QModelIndex& index, int node_id)
+void MainWindow::RemoveView(TreeModel* model, const QModelIndex& index, int node_id)
 {
     model->RemoveRow(index.row(), index.parent());
     auto view { section_view_->value(node_id) };
 
     if (view) {
-        Free(view);
+        FreeView(view);
         section_view_->remove(node_id);
         SignalStation::Instance().DeregisterModel(section_data_->tree_info.section, node_id);
     }
@@ -575,9 +575,8 @@ void MainWindow::RestoreView(CString& section_name, CString& property)
 
     for (const int& node_id : list) {
         node = model->GetNode(node_id);
-        if (node) {
+        if (node && !node->branch)
             CreateTable(node->name, node->id, node->node_rule);
-        }
     }
 }
 
@@ -605,12 +604,12 @@ void MainWindow::Recent()
     SetClearMenuAction();
 }
 
-void MainWindow::RemoveBranchMsg(TreeModel* model, const QModelIndex& index)
+void MainWindow::RemoveBranch(TreeModel* model, const QModelIndex& index, int node_id)
 {
     QMessageBox msg {};
     msg.setIcon(QMessageBox::Question);
-    msg.setText(tr("Remove Branch"));
-    msg.setInformativeText(tr("This branch will be deleted, children are promoted to current layer"));
+    msg.setText(tr("Remove %1").arg(model->BranchPath()->value(node_id)));
+    msg.setInformativeText(tr("The branch will be removed, and its direct children will be promoted to the same level."));
     msg.setStandardButtons(QMessageBox::Cancel | QMessageBox::Ok);
 
     if (msg.exec() == QMessageBox::Ok)
@@ -625,7 +624,7 @@ void MainWindow::RTabCloseRequested(int index)
     int node_id { ui->tabWidget->tabBar()->tabData(index).value<Tab>().node };
     auto view { section_view_->value(node_id) };
 
-    Free(view);
+    FreeView(view);
     section_view_->remove(node_id);
 
     SignalStation::Instance().DeregisterModel(section_data_->table_info.section, node_id);
@@ -633,7 +632,7 @@ void MainWindow::RTabCloseRequested(int index)
 
 template <typename T>
     requires InheritQAbstractItemView<T>
-void MainWindow::Free(T*& view)
+void MainWindow::FreeView(T*& view)
 {
     if (view) {
         if (auto model = view->model()) {
@@ -712,6 +711,7 @@ void MainWindow::SetView(QTableView* view)
     view->verticalHeader()->setHidden(true);
 
     view->scrollToBottom();
+    view->setCurrentIndex(QModelIndex());
     view->sortByColumn(static_cast<int>(TransColumn::kPostDate), Qt::AscendingOrder);
 }
 
@@ -1112,7 +1112,7 @@ void MainWindow::RUpdateDocument()
     auto model { GetTableModel(view) };
     auto trans { model->GetTrans(trans_index) };
 
-    auto dialog { new OriginalDocument(section_data_->tree_info.section, trans, document_dir, this) };
+    auto dialog { new EditDocument(section_data_->tree_info.section, trans, document_dir, this) };
     if (dialog->exec() == QDialog::Accepted)
         section_data_->table_sql.Update(DOCUMENT, trans->document->join(SEMICOLON), *trans->id);
 }
@@ -1200,7 +1200,7 @@ void MainWindow::RFreeView(int node_id)
     auto view { section_view_->value(node_id) };
 
     if (view) {
-        Free(view);
+        FreeView(view);
         section_view_->remove(node_id);
         SignalStation::Instance().DeregisterModel(section_data_->table_info.section, node_id);
     }
@@ -1446,7 +1446,7 @@ void MainWindow::RAboutTriggered()
 void MainWindow::RNewTriggered()
 {
     QString filter("*.ytx");
-    auto file_path { QFileDialog::getSaveFileName(this, tr("New File"), QDir::homePath(), filter, nullptr) };
+    auto file_path { QFileDialog::getSaveFileName(this, tr("New"), QDir::homePath(), filter, nullptr) };
     if (file_path.isEmpty())
         return;
 
@@ -1460,7 +1460,7 @@ void MainWindow::RNewTriggered()
 void MainWindow::ROpenTriggered()
 {
     QString filter("*.ytx");
-    auto file_path { QFileDialog::getOpenFileName(this, tr("Select File"), QDir::homePath(), filter, nullptr) };
+    auto file_path { QFileDialog::getOpenFileName(this, tr("Open"), QDir::homePath(), filter, nullptr) };
 
     ROpenFile(file_path);
 }

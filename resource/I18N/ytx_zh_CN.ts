@@ -20,12 +20,16 @@
         <translation>https://gitee.com/ytxcash/YTX</translation>
     </message>
     <message>
+        <location line="+31"/>
+        <location/>
+        <source>YTX 0.1.0</source>
+        <translation></translation>
+    </message>
+    <message>
         <source>https://github.com/YtxCash/Ytx</source>
         <translation type="vanished">https://gitee.com/ytxcash/YTX</translation>
     </message>
     <message>
-        <location line="+31"/>
-        <location/>
         <source>YTX 0.1</source>
         <translation></translation>
     </message>
@@ -97,6 +101,61 @@ Rage, rage against the dying of the light.</source>
     </message>
 </context>
 <context>
+    <name>EditDocument</name>
+    <message>
+        <source>Edit Document</source>
+        <translation>编辑文件</translation>
+    </message>
+    <message>
+        <location filename="../../dialog/editdocument.ui" line="+36"/>
+        <location/>
+        <source>Remove</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <source>&amp;Help</source>
+        <translation>帮助(&amp;H)</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <location/>
+        <source>Add</source>
+        <translation>添加</translation>
+    </message>
+    <message>
+        <location line="+20"/>
+        <location/>
+        <source>&amp;Cancel</source>
+        <translation>取消(&amp;C)</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <location/>
+        <source>&amp;Ok</source>
+        <translation>确认(&amp;O)</translation>
+    </message>
+    <message>
+        <location filename="../../dialog/editdocument.cc" line="+31"/>
+        <source>Select Document</source>
+        <translation>选择文件</translation>
+    </message>
+    <message>
+        <location line="+41"/>
+        <source>Document Not Found</source>
+        <translation>文件未找到</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Sorry about that, it seems like the document isn&apos;t there. Can you give it another look?</source>
+        <translation>抱歉，文件似乎不存在，你能再确认一下吗？</translation>
+    </message>
+    <message>
+        <location line="+15"/>
+        <source>Document</source>
+        <translation>文件</translation>
+    </message>
+</context>
+<context>
     <name>EditNode</name>
     <message>
         <location filename="../../dialog/editnode.ui" line="+17"/>
@@ -153,8 +212,6 @@ Rage, rage against the dying of the light.</source>
         <translation>确认(&amp;O)</translation>
     </message>
     <message>
-        <location line="+7"/>
-        <location/>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
@@ -171,7 +228,7 @@ Rage, rage against the dying of the light.</source>
         <translation>取消(&amp;C)</translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="+7"/>
         <location/>
         <source>Unit</source>
         <translation>单位</translation>
@@ -284,7 +341,7 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location filename="../../mainwindow.ui" line="+85"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+297"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+297"/>
         <source>Finance</source>
         <translation>财务</translation>
     </message>
@@ -295,21 +352,21 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location line="+19"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Sales</source>
         <translation>销售</translation>
     </message>
     <message>
         <location line="+13"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Task</source>
         <translation>任务</translation>
     </message>
     <message>
         <location line="+13"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Network</source>
         <translation>人脉</translation>
     </message>
@@ -320,21 +377,21 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location line="+26"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Purchase</source>
         <translation>采购</translation>
     </message>
     <message>
         <location line="+22"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>File</source>
         <translation>文件</translation>
     </message>
     <message>
         <location line="+4"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Recent Files</source>
         <translation>历史记录</translation>
     </message>
@@ -342,7 +399,7 @@ Rage, rage against the dying of the light.</source>
         <location line="+13"/>
         <location line="+74"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-37"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-37"/>
         <location line="+38"/>
         <source>Edit</source>
         <translation>编辑</translation>
@@ -354,7 +411,7 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location line="-56"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>toolBar</source>
         <translation>工具栏</translation>
     </message>
@@ -362,7 +419,7 @@ Rage, rage against the dying of the light.</source>
         <location line="+21"/>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-58"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-58"/>
         <location line="+2"/>
         <source>Insert</source>
         <translation>插入</translation>
@@ -370,28 +427,28 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+3"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+3"/>
         <source>Ctrl+N</source>
         <translation></translation>
     </message>
     <message>
         <location line="+5"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Remove</source>
         <translation>删除</translation>
     </message>
     <message>
         <location line="+5"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Append</source>
         <translation>追加</translation>
     </message>
     <message>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Ctrl+P</source>
         <translation></translation>
     </message>
@@ -399,7 +456,7 @@ Rage, rage against the dying of the light.</source>
         <location line="+5"/>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <location line="+2"/>
         <source>Jump</source>
         <translation>跳转</translation>
@@ -407,42 +464,42 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+3"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+3"/>
         <source>Ctrl+J</source>
         <translation></translation>
     </message>
     <message>
         <location line="+8"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+4"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+4"/>
         <source>Ctrl+E</source>
         <translation></translation>
     </message>
     <message>
         <location line="+5"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Search</source>
         <translation>搜索</translation>
     </message>
     <message>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Ctrl+F</source>
         <translation></translation>
     </message>
     <message>
         <location line="+5"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Preferences...</source>
         <translation>首选项...</translation>
     </message>
     <message>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Ctrl+,</source>
         <translation></translation>
     </message>
@@ -450,7 +507,7 @@ Rage, rage against the dying of the light.</source>
         <location line="+8"/>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <location line="+2"/>
         <source>About YTX</source>
         <translation>关于 YTX</translation>
@@ -466,63 +523,63 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location line="+8"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>New...</source>
         <translation>新建...</translation>
     </message>
     <message>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Ctrl+Alt+N</source>
         <translation></translation>
     </message>
     <message>
         <location line="+8"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Open...</source>
         <translation>打开...</translation>
     </message>
     <message>
         <location line="+3"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Ctrl+O</source>
         <translation></translation>
     </message>
     <message>
         <location line="+8"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
         <source>Clear Menu</source>
         <translation>清除菜单</translation>
     </message>
     <message>
         <location line="+5"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Separator</source>
         <translation>分隔符</translation>
     </message>
     <message>
         <location line="+5"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>CheckAll</source>
         <translation>全选</translation>
     </message>
     <message>
         <location line="+8"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>CheckNone</source>
         <translation>空选</translation>
     </message>
     <message>
         <location line="+8"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>CheckReverse</source>
         <translation>反选</translation>
     </message>
@@ -539,7 +596,7 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">此节点将被删除，且所有子节点提升至此</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.cc" line="+863"/>
+        <location filename="../../mainwindow.cc" line="+862"/>
         <source>Account</source>
         <translation>科目</translation>
     </message>
@@ -602,7 +659,7 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location filename="../../mainwindow.ui" line="-212"/>
         <location/>
-        <location filename="../../../YtxBuild/Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+6"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+6"/>
         <source>Product</source>
         <translation>产品</translation>
     </message>
@@ -720,14 +777,12 @@ Rage, rage against the dying of the light.</source>
         <translation></translation>
     </message>
     <message>
-        <location line="+513"/>
         <source>New File</source>
-        <translation>新建文档</translation>
+        <translation>新建</translation>
     </message>
     <message>
-        <location line="+14"/>
         <source>Select File</source>
-        <translation>选择文件</translation>
+        <translation>打开</translation>
     </message>
     <message>
         <source>Select Original Document</source>
@@ -738,7 +793,7 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">原始凭证</translation>
     </message>
     <message>
-        <location line="-599"/>
+        <location line="-72"/>
         <location line="+20"/>
         <location line="+20"/>
         <location line="+20"/>
@@ -775,12 +830,10 @@ Rage, rage against the dying of the light.</source>
         <translation>左节点</translation>
     </message>
     <message>
-        <location line="-318"/>
         <source>Remove Branch</source>
-        <translation>移除分支</translation>
+        <translation>删除分支</translation>
     </message>
     <message>
-        <location line="+1"/>
         <source>This branch will be deleted, children are promoted to current layer</source>
         <translation>将删除此分支，且所有子节点提升至同级</translation>
     </message>
@@ -805,7 +858,7 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">职员</translation>
     </message>
     <message>
-        <location line="+250"/>
+        <location line="-67"/>
         <location line="+20"/>
         <location line="+20"/>
         <location line="+20"/>
@@ -832,7 +885,17 @@ Rage, rage against the dying of the light.</source>
         <translation></translation>
     </message>
     <message>
-        <location line="-71"/>
+        <location line="-323"/>
+        <source>Remove %1</source>
+        <translation>删除 %1</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The branch will be removed, and its direct children will be promoted to the same level.</source>
+        <translation>将删除此分支，且所有直系子节点提升至同级。</translation>
+    </message>
+    <message>
+        <location line="+251"/>
         <location line="+20"/>
         <location line="+20"/>
         <location line="+20"/>
@@ -877,11 +940,21 @@ Rage, rage against the dying of the light.</source>
         <translation>种类</translation>
     </message>
     <message>
+        <location line="+566"/>
+        <source>New</source>
+        <translation>新建</translation>
+    </message>
+    <message>
+        <location line="+14"/>
+        <source>Open</source>
+        <translation>打开</translation>
+    </message>
+    <message>
         <source>Position</source>
         <translation type="vanished">位置</translation>
     </message>
     <message>
-        <location line="+20"/>
+        <location line="-560"/>
         <location line="+20"/>
         <source>Name</source>
         <translation>名称</translation>
@@ -890,20 +963,14 @@ Rage, rage against the dying of the light.</source>
 <context>
     <name>OriginalDocument</name>
     <message>
-        <location filename="../../dialog/originaldocument.ui" line="+14"/>
-        <location/>
         <source>Dialog</source>
         <translation></translation>
     </message>
     <message>
-        <location line="+36"/>
-        <location/>
         <source>Add</source>
         <translation>添加</translation>
     </message>
     <message>
-        <location line="-14"/>
-        <location/>
         <source>Remove</source>
         <translation>移除</translation>
     </message>
@@ -912,40 +979,30 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">插入</translation>
     </message>
     <message>
-        <location line="+7"/>
-        <location/>
         <source>&amp;Help</source>
         <translation>帮助(&amp;H)</translation>
     </message>
     <message>
-        <location line="+27"/>
-        <location/>
         <source>&amp;Cancel</source>
         <translation>取消(&amp;C)</translation>
     </message>
     <message>
-        <location line="+7"/>
-        <location/>
         <source>&amp;Ok</source>
         <translation>确认(&amp;O)</translation>
     </message>
     <message>
-        <location filename="../../dialog/originaldocument.cc" line="+31"/>
         <source>Select Original Document</source>
         <translation>选择原始凭证</translation>
     </message>
     <message>
-        <location line="+41"/>
         <source>Doesn&apos;t Exit</source>
         <translation>未发现</translation>
     </message>
     <message>
-        <location line="+1"/>
         <source>File doesn&apos;t exit, please check again.</source>
         <translation>未找到原始凭证，请重新确认。</translation>
     </message>
     <message>
-        <location line="+15"/>
         <source>Original Document</source>
         <translation>原始凭证</translation>
     </message>
@@ -1153,10 +1210,18 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">此节点存在关联的交易，如何处理？</translation>
     </message>
     <message>
-        <location line="+6"/>
-        <location/>
         <source>This node has associated transactions. How to deal with them while deleting node?</source>
         <translation>此节点有相关的交易，删除节点时如何处理它们？</translation>
+    </message>
+    <message>
+        <source>This node is being removed, but it has associated transactions. How should they be handled?</source>
+        <translation>这个节点将被删除，但它存在相关的交易，要怎么处理？</translation>
+    </message>
+    <message>
+        <location line="+6"/>
+        <location/>
+        <source>This node is being removed, but it has related records. How should they be handled?</source>
+        <translation>这个节点将被删除，但它存在相关的记录，要怎么处理？</translation>
     </message>
     <message>
         <location line="+33"/>
@@ -1173,14 +1238,35 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location line="+19"/>
         <location/>
-        <location filename="../../dialog/removenode.cc" line="+32"/>
-        <source>Remove Trans</source>
-        <translation>移除交易</translation>
+        <source>Remove</source>
+        <translation>删除</translation>
     </message>
     <message>
         <location line="+13"/>
         <location/>
-        <location filename="../../dialog/removenode.cc" line="+5"/>
+        <source>Replace</source>
+        <translation>替换</translation>
+    </message>
+    <message>
+        <location filename="../../dialog/removenode.cc" line="+32"/>
+        <source>Remove Records</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Replace Records</source>
+        <translation>替换</translation>
+    </message>
+    <message>
+        <location line="+25"/>
+        <source>Remove %1</source>
+        <translation>删除 %1</translation>
+    </message>
+    <message>
+        <source>Remove Trans</source>
+        <translation>移除交易</translation>
+    </message>
+    <message>
         <source>Replace Trans</source>
         <translation>替换交易</translation>
     </message>
@@ -1213,19 +1299,34 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">相关交易中的此节点将被替换为 %1、然后删除；若存在无法替换的交易，则保留，确定吗？</translation>
     </message>
     <message>
-        <location filename="../../dialog/removenode.cc" line="-4"/>
         <source>Will remove %1 and associated transactions, Sure ?</source>
         <translation>将移除 %1 和关联的交易，确定吗？</translation>
     </message>
     <message>
-        <location line="+5"/>
         <source>In associated transactions, %1 will be replaced with %2, Sure ?</source>
         <translation>关联交易中的 %1，将被替换为 %2，确定吗？</translation>
     </message>
     <message>
-        <location line="+24"/>
+        <source>Are you sure you want to remove %1 and its associated transactions?</source>
+        <translation>确定要删除 %1 和它的相关记录吗？</translation>
+    </message>
+    <message>
+        <source>Are you sure you want to replace %1 with %2 in all associated transactions?</source>
+        <translation>确定要将相关记录中的 %1 替换为 %2 吗？</translation>
+    </message>
+    <message>
+        <location line="-29"/>
+        <source>Are you sure you want to remove %1 and its related records?</source>
+        <translation>确定要删除 %1 和它的相关记录吗？</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>Are you sure you want to replace %1 with %2 in all related records?</source>
+        <translation>确定要将相关记录中的 %1 替换为 %2 吗？</translation>
+    </message>
+    <message>
         <source>Remove Node</source>
-        <translation>移除节点</translation>
+        <translation>删除节点</translation>
     </message>
 </context>
 <context>

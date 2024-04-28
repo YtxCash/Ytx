@@ -137,13 +137,6 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="0">
-    <widget class="QPushButton" name="pBtnHelp">
-     <property name="text">
-      <string>&amp;Help</string>
-     </property>
-    </widget>
-   </item>
    <item row="2" column="1" colspan="3">
     <widget class="QLineEdit" name="lineEditDescription"/>
    </item>
@@ -167,19 +160,6 @@
      </property>
     </widget>
    </item>
-   <item row="6" column="1">
-    <spacer name="horizontalSpacer">
-     <property name="orientation">
-      <enum>Qt::Horizontal</enum>
-     </property>
-     <property name="sizeHint" stdset="0">
-      <size>
-       <width>111</width>
-       <height>20</height>
-      </size>
-     </property>
-    </spacer>
-   </item>
    <item row="3" column="0">
     <widget class="QLabel" name="labUnit">
      <property name="text">
@@ -193,6 +173,19 @@
    <item row="3" column="1" colspan="3">
     <widget class="QComboBox" name="comboUnit"/>
    </item>
+   <item row="6" column="0" colspan="2">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>111</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
   </layout>
  </widget>
  <tabstops>
@@ -203,7 +196,6 @@
   <tabstop>plainTextEdit</tabstop>
   <tabstop>pBtnOk</tabstop>
   <tabstop>pBtnCancel</tabstop>
-  <tabstop>pBtnHelp</tabstop>
   <tabstop>rBtnDICD</tabstop>
   <tabstop>rBtnDDCI</tabstop>
   <tabstop>chkBoxBranch</tabstop>

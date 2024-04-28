@@ -353,17 +353,17 @@ QMultiHash<int, int> TableSql::RelatedNodeAndTrans(int node_id) const
     query.bindValue(":node_id", node_id);
 
     if (!query.exec()) {
-        qWarning() << "Error in GetAssociatedNode 1st" << query.lastError().text();
+        qWarning() << "Error in RelatedNodeAndTrans 1st" << query.lastError().text();
     }
 
     QMultiHash<int, int> hash {};
-    int associated_node_id {};
+    int related_node_id {};
     int trans_id {};
 
     while (query.next()) {
-        associated_node_id = query.value("lhs_node").toInt();
+        related_node_id = query.value("lhs_node").toInt();
         trans_id = query.value("id").toInt();
-        hash.insert(associated_node_id, trans_id);
+        hash.insert(related_node_id, trans_id);
     }
 
     return hash;

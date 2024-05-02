@@ -3,8 +3,11 @@
 
 static const int ROW_HEIGHT = 24;
 
-static const double MAX = 1000000000.00;
-static const double MIN = -1000000000.00;
+static const double DMAX = 1000000000.00;
+static const double DMIN = -1000000000.00;
+
+static const int IMAX = 365;
+static const int IMIN = 0;
 
 static const char* CHECK = "check";
 static const char* DATE_FORMAT = "date_format";
@@ -34,6 +37,7 @@ static const char* SFX_YTX = ".ytx";
 static const char* COLON = ":";
 static const char* DASH = "-";
 static const char* DATE_TIME_FST = "yyyy-MM-dd hh:mm:ss";
+static const char* DATE_FST = "d";
 static const char* DATE = "yyyy-MM-dd";
 static const char* MINUS = "-";
 static const char* PLUS = "+";
@@ -47,12 +51,17 @@ static const char* BRANCH = "branch";
 static const char* CODE = "code";
 static const char* DATETIME = "date_time";
 static const char* DESCRIPTION = "description";
+static const char* EXTENSION = "extension";
+static const char* DEADLINE = "deadline";
 static const char* NAME = "name";
 static const char* NODEID = "node/id";
 static const char* NODERULE = "node_rule";
 static const char* NOTE = "note";
+static const char* RATIO = "ratio";
 static const char* STATE = "state";
 static const char* UNIT = "unit";
+static const char* TRANSPORT = "sender_receiver";
+static const char* LOCATION = "section_marker";
 
 static const char* Finance = "Finance";
 static const char* Network = "Network";

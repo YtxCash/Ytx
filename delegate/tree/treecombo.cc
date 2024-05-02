@@ -1,16 +1,16 @@
-#include "combohash.h"
+#include "treecombo.h"
 
 #include <widget/combobox.h>
 
 #include <QPainter>
 
-ComboHash::ComboHash(CStringHash* hash, QObject* parent)
+TreeCombo::TreeCombo(CStringHash* hash, QObject* parent)
     : QStyledItemDelegate { parent }
     , hash_ { hash }
 {
 }
 
-QWidget* ComboHash::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+QWidget* TreeCombo::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(option);
     Q_UNUSED(index);
@@ -24,7 +24,7 @@ QWidget* ComboHash::createEditor(QWidget* parent, const QStyleOptionViewItem& op
     return editor;
 }
 
-void ComboHash::setEditorData(QWidget* editor, const QModelIndex& index) const
+void TreeCombo::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
     auto cast_editor { qobject_cast<ComboBox*>(editor) };
 
@@ -33,19 +33,19 @@ void ComboHash::setEditorData(QWidget* editor, const QModelIndex& index) const
         cast_editor->setCurrentIndex(item_index);
 }
 
-void ComboHash::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void TreeCombo::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(index);
 
     editor->setGeometry(option.rect);
 }
 
-void ComboHash::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
+void TreeCombo::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
 {
     model->setData(index, qobject_cast<ComboBox*>(editor)->currentData().toInt());
 }
 
-void ComboHash::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void TreeCombo::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     QString path { hash_->value(index.data().toInt()) };
 

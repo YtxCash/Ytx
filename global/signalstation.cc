@@ -30,7 +30,30 @@ void SignalStation::RAppendOne(Section section, CSPCTrans& trans)
     disconnect(this, &SignalStation::SAppendOne, model, &TableModel::RAppendOne);
 }
 
-void SignalStation::RDeleteOne(Section section, int node_id, int trans_id)
+void SignalStation::RRetrieveOne(Section section, CSPTrans& trans)
+{
+    auto section_model_hash { model_hash_.value(section) };
+
+    int related_node_id { *trans->related_node };
+    auto related_model { section_model_hash.value(related_node_id, nullptr) };
+    if (!related_model)
+        return;
+
+    connect(this, &SignalStation::SAppendOne, related_model, &TableModel::RAppendOne, Qt::UniqueConnection);
+    emit SAppendOne(trans);
+    disconnect(this, &SignalStation::SAppendOne, related_model, &TableModel::RAppendOne);
+
+    int node { *trans->node };
+    auto model { section_model_hash.value(node, nullptr) };
+    if (!model)
+        return;
+
+    connect(this, &SignalStation::SRetrieveOne, model, &TableModel::RRetrieveOne, Qt::UniqueConnection);
+    emit SRetrieveOne(trans);
+    disconnect(this, &SignalStation::SRetrieveOne, model, &TableModel::RRetrieveOne);
+}
+
+void SignalStation::RRemoveOne(Section section, int node_id, int trans_id)
 {
     auto section_model_hash { model_hash_.value(section) };
 
@@ -38,9 +61,9 @@ void SignalStation::RDeleteOne(Section section, int node_id, int trans_id)
     if (!model)
         return;
 
-    connect(this, &SignalStation::SDeleteOne, model, &TableModel::RDeleteOne, Qt::UniqueConnection);
-    emit SDeleteOne(node_id, trans_id);
-    disconnect(this, &SignalStation::SDeleteOne, model, &TableModel::RDeleteOne);
+    connect(this, &SignalStation::SRemoveOne, model, &TableModel::RRemoveOne, Qt::UniqueConnection);
+    emit SRemoveOne(node_id, trans_id);
+    disconnect(this, &SignalStation::SRemoveOne, model, &TableModel::RRemoveOne);
 }
 
 void SignalStation::RUpdateBalance(Section section, int node_id, int trans_id)

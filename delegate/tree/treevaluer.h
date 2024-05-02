@@ -1,14 +1,16 @@
-#ifndef TREEVALUE_H
-#define TREEVALUE_H
+#ifndef TREEVALUER_H
+#define TREEVALUER_H
+
+// read only
 
 #include <QLocale>
 #include <QStyledItemDelegate>
 
 #include "component/using.h"
 
-class TreeValue : public QStyledItemDelegate {
+class TreeValueR : public QStyledItemDelegate {
 public:
-    TreeValue(const int* decimal, CStringHash* unit_symbol_hash, QObject* parent = nullptr);
+    TreeValueR(const int* decimal, CStringHash* unit_symbol_hash, QObject* parent = nullptr);
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
@@ -21,4 +23,4 @@ private:
     QLocale locale_ {};
 };
 
-#endif // TREEVALUE_H
+#endif // TREEVALUER_H

@@ -1,15 +1,15 @@
-#include "plaintext.h"
+#include "treeplaintext.h"
 
 #include <QApplication>
 #include <QPlainTextEdit>
 #include <QRect>
 
-PlainText::PlainText(QObject* parent)
+TreePlainText::TreePlainText(QObject* parent)
     : QStyledItemDelegate { parent }
 {
 }
 
-QWidget* PlainText::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+QWidget* TreePlainText::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(option);
     Q_UNUSED(index);
@@ -19,9 +19,12 @@ QWidget* PlainText::createEditor(QWidget* parent, const QStyleOptionViewItem& op
     return editor;
 }
 
-void PlainText::setEditorData(QWidget* editor, const QModelIndex& index) const { qobject_cast<QPlainTextEdit*>(editor)->setPlainText(index.data().toString()); }
+void TreePlainText::setEditorData(QWidget* editor, const QModelIndex& index) const
+{
+    qobject_cast<QPlainTextEdit*>(editor)->setPlainText(index.data().toString());
+}
 
-void PlainText::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void TreePlainText::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(index);
 
@@ -32,7 +35,7 @@ void PlainText::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem
     editor->setGeometry(QRect(option.rect.bottomLeft(), QSize(width, height)));
 }
 
-void PlainText::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
+void TreePlainText::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
 {
     model->setData(index, qobject_cast<QPlainTextEdit*>(editor)->toPlainText());
 }

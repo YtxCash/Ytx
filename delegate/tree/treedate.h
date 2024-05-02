@@ -1,12 +1,12 @@
-#ifndef TABLEVALUE_H
-#define TABLEVALUE_H
+#ifndef TREEDATE_H
+#define TREEDATE_H
 
-#include <QLocale>
+#include <QDate>
 #include <QStyledItemDelegate>
 
-class TableValue : public QStyledItemDelegate {
+class TreeDate : public QStyledItemDelegate {
 public:
-    TableValue(const int* decimal, double min, double max, QObject* parent = nullptr);
+    explicit TreeDate(QObject* parent = nullptr);
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     void setEditorData(QWidget* editor, const QModelIndex& index) const override;
     void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
@@ -15,10 +15,7 @@ public:
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
-    const int* decimal_ {};
-    double max_ {};
-    double min_ {};
-    QLocale locale_ {};
+    mutable QDate last_insert_ {};
 };
 
-#endif // TABLEVALUE_H
+#endif // TREEDATE_H

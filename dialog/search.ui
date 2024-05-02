@@ -91,19 +91,19 @@
    <item>
     <widget class="QStackedWidget" name="stackedWidget">
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <widget class="QWidget" name="page">
       <layout class="QGridLayout" name="gridLayout">
        <item row="0" column="0">
-        <widget class="QTableView" name="nodeView"/>
+        <widget class="QTableView" name="treeView"/>
        </item>
       </layout>
      </widget>
      <widget class="QWidget" name="page2">
       <layout class="QGridLayout" name="gridLayout_2">
        <item row="0" column="0">
-        <widget class="QTableView" name="transView"/>
+        <widget class="QTableView" name="tableView"/>
        </item>
       </layout>
      </widget>

@@ -34,7 +34,7 @@ void State::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& op
 
 void State::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
-    if (index.column() == static_cast<int>(NodeColumn::kBranch) && (option.state & QStyle::State_Selected))
+    if (index.column() == std::to_underlying(TreeColumn::kBranch) && (option.state & QStyle::State_Selected))
         painter->fillRect(option.rect, option.palette.highlight());
 
     rect_.moveCenter(option.rect.center());

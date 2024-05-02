@@ -158,7 +158,7 @@ Rage, rage against the dying of the light.</source>
 <context>
     <name>EditNode</name>
     <message>
-        <location filename="../../dialog/editnode.ui" line="+17"/>
+        <location filename="../../dialog/editnode.ui" line="+108"/>
         <location/>
         <source>Name</source>
         <translation>名称</translation>
@@ -168,45 +168,63 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">占位符</translation>
     </message>
     <message>
-        <location line="+61"/>
+        <location line="+119"/>
         <location/>
         <source>&amp;Branch</source>
         <translation>分支(&amp;B)</translation>
     </message>
     <message>
-        <location line="-26"/>
+        <location line="-39"/>
         <location/>
         <source>&amp;DICD</source>
         <translatorcomment>借加贷减</translatorcomment>
         <translation></translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="-161"/>
+        <location/>
+        <source>Extension</source>
+        <translation>帐期</translation>
+    </message>
+    <message>
+        <location line="+174"/>
         <location/>
         <source>DDC&amp;I</source>
         <translatorcomment>借减贷加</translatorcomment>
         <translation></translation>
     </message>
     <message>
-        <location line="+29"/>
+        <location line="-127"/>
+        <location/>
+        <source>Ratio</source>
+        <translation>比率</translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <location/>
+        <source>Deadline</source>
+        <translation>止期</translation>
+    </message>
+    <message>
+        <location line="+43"/>
         <location/>
         <source>Note</source>
         <translation>备注</translation>
     </message>
     <message>
-        <location line="+19"/>
+        <location line="+39"/>
         <location/>
         <source>Property</source>
         <translation>属性</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="-26"/>
         <location/>
         <source>Description</source>
         <translation>描述</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="-39"/>
         <location/>
         <source>&amp;Ok</source>
         <translation>确认(&amp;O)</translation>
@@ -216,19 +234,19 @@ Rage, rage against the dying of the light.</source>
         <translation>帮助(&amp;H)</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="-34"/>
         <location/>
         <source>Code</source>
         <translation>编号</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="-17"/>
         <location/>
         <source>&amp;Cancel</source>
         <translation>取消(&amp;C)</translation>
     </message>
     <message>
-        <location line="+7"/>
+        <location line="+100"/>
         <location/>
         <source>Unit</source>
         <translation>单位</translation>
@@ -236,6 +254,89 @@ Rage, rage against the dying of the light.</source>
     <message>
         <source>Currency</source>
         <translation type="vanished">币种</translation>
+    </message>
+    <message>
+        <location filename="../../dialog/editnode.cc" line="+117"/>
+        <source>Account</source>
+        <translation>科目</translation>
+    </message>
+    <message>
+        <location line="+10"/>
+        <source>UnitPrice</source>
+        <translation>单价</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>PaymentTerm</source>
+        <translation>帐期</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>TaxRate</source>
+        <translation>税率</translation>
+    </message>
+</context>
+<context>
+    <name>EditTransport</name>
+    <message>
+        <location filename="../../dialog/edittransport.ui" line="+14"/>
+        <location/>
+        <source>Transport</source>
+        <translation>传递</translation>
+    </message>
+    <message>
+        <location line="+41"/>
+        <location/>
+        <source>Section</source>
+        <translation>版块</translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <location/>
+        <source>Debit</source>
+        <translation>借方</translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <location/>
+        <source>Credit</source>
+        <translation>贷方</translation>
+    </message>
+    <message>
+        <location line="+26"/>
+        <location/>
+        <source>Value</source>
+        <translation>数值</translation>
+    </message>
+    <message>
+        <location line="-106"/>
+        <location/>
+        <source>Add</source>
+        <translation>添加</translation>
+    </message>
+    <message>
+        <location line="+134"/>
+        <location/>
+        <source>Remove</source>
+        <translation>删除</translation>
+    </message>
+    <message>
+        <location line="-141"/>
+        <location/>
+        <source>Close</source>
+        <translation>关闭</translation>
+    </message>
+    <message>
+        <source>Finance</source>
+        <translation>财务</translation>
+    </message>
+    <message>
+        <source>Product</source>
+        <translation>产品</translation>
+    </message>
+    <message>
+        <source>Task</source>
+        <translation>任务</translation>
     </message>
 </context>
 <context>
@@ -341,7 +442,7 @@ Rage, rage against the dying of the light.</source>
     <message>
         <location filename="../../mainwindow.ui" line="+85"/>
         <location/>
-        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+297"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+335"/>
         <source>Finance</source>
         <translation>财务</translation>
     </message>
@@ -397,10 +498,8 @@ Rage, rage against the dying of the light.</source>
     </message>
     <message>
         <location line="+13"/>
-        <location line="+74"/>
         <location/>
-        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-37"/>
-        <location line="+38"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>Edit</source>
         <translation>编辑</translation>
     </message>
@@ -409,17 +508,17 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">报表</translation>
     </message>
     <message>
-        <location line="-56"/>
+        <location line="+22"/>
         <location/>
         <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+1"/>
         <source>toolBar</source>
         <translation>工具栏</translation>
     </message>
     <message>
-        <location line="+21"/>
+        <location line="+20"/>
         <location line="+3"/>
         <location/>
-        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-58"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-82"/>
         <location line="+2"/>
         <source>Insert</source>
         <translation>插入</translation>
@@ -472,6 +571,13 @@ Rage, rage against the dying of the light.</source>
         <location line="+8"/>
         <location/>
         <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+4"/>
+        <source>Edit Node</source>
+        <translation>编辑节点</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+3"/>
         <source>Ctrl+E</source>
         <translation></translation>
     </message>
@@ -513,6 +619,61 @@ Rage, rage against the dying of the light.</source>
         <translation>关于 YTX</translation>
     </message>
     <message>
+        <location line="+64"/>
+        <location line="+3"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+15"/>
+        <location line="+2"/>
+        <source>Locate</source>
+        <translation>定位</translation>
+    </message>
+    <message>
+        <location line="+11"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+7"/>
+        <source>Edit Document</source>
+        <translation>编辑文件</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+3"/>
+        <source>Alt+D</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <source>Transport</source>
+        <translation>传递</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <source>Edit Transport</source>
+        <translation>编辑传递</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+3"/>
+        <source>Alt+T</source>
+        <translation></translation>
+    </message>
+    <message>
+        <source>TPJump</source>
+        <translation>TP跳转</translation>
+    </message>
+    <message>
+        <location line="-25"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-14"/>
+        <source>Alt+J</source>
+        <translation></translation>
+    </message>
+    <message>
         <source>About Ytx</source>
         <translation type="vanished">关于 Ytx</translation>
     </message>
@@ -521,9 +682,9 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">关于 YtxCash</translation>
     </message>
     <message>
-        <location line="+8"/>
+        <location line="-62"/>
         <location/>
-        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+2"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-18"/>
         <source>New...</source>
         <translation>新建...</translation>
     </message>
@@ -596,70 +757,70 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">此节点将被删除，且所有子节点提升至此</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.cc" line="+862"/>
+        <location filename="../../mainwindow.cc" line="+928"/>
         <source>Account</source>
         <translation>科目</translation>
     </message>
     <message>
         <location line="+0"/>
-        <location line="+1"/>
+        <location line="+2"/>
         <location line="+3"/>
-        <location line="+16"/>
-        <location line="+1"/>
+        <location line="+17"/>
+        <location line="+2"/>
         <location line="+3"/>
-        <location line="+16"/>
-        <location line="+1"/>
+        <location line="+17"/>
+        <location line="+2"/>
         <location line="+3"/>
-        <location line="+16"/>
-        <location line="+1"/>
+        <location line="+17"/>
+        <location line="+2"/>
         <location line="+3"/>
         <source>ID</source>
         <translation></translation>
     </message>
     <message>
-        <location line="-64"/>
-        <location line="+1"/>
+        <location line="-71"/>
+        <location line="+2"/>
         <location line="+5"/>
-        <location line="+14"/>
-        <location line="+1"/>
+        <location line="+15"/>
+        <location line="+2"/>
         <location line="+5"/>
-        <location line="+14"/>
-        <location line="+1"/>
+        <location line="+15"/>
+        <location line="+2"/>
         <location line="+5"/>
-        <location line="+14"/>
-        <location line="+1"/>
+        <location line="+15"/>
+        <location line="+2"/>
         <location line="+5"/>
         <source>Code</source>
         <translation>编号</translation>
     </message>
     <message>
-        <location line="-66"/>
-        <location line="+1"/>
+        <location line="-73"/>
+        <location line="+2"/>
         <location line="+10"/>
-        <location line="+9"/>
-        <location line="+1"/>
         <location line="+10"/>
-        <location line="+9"/>
-        <location line="+1"/>
+        <location line="+2"/>
         <location line="+10"/>
-        <location line="+9"/>
-        <location line="+1"/>
+        <location line="+10"/>
+        <location line="+2"/>
+        <location line="+10"/>
+        <location line="+10"/>
+        <location line="+2"/>
         <location line="+10"/>
         <source>Description</source>
         <translation>描述</translation>
     </message>
     <message>
-        <location line="-71"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-78"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>Note</source>
         <translation>备注</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.ui" line="-212"/>
+        <location filename="../../mainwindow.ui" line="-218"/>
         <location/>
-        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+6"/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="+27"/>
         <source>Product</source>
         <translation>产品</translation>
     </message>
@@ -680,40 +841,32 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">币种</translation>
     </message>
     <message>
-        <location filename="../../mainwindow.cc" line="-60"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location filename="../../mainwindow.cc" line="-65"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>Total</source>
         <translation>合计</translation>
     </message>
     <message>
-        <location line="-60"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-67"/>
+        <location line="+22"/>
+        <location line="+23"/>
+        <location line="+21"/>
         <source>R</source>
         <translatorcomment>Rule，规则</translatorcomment>
         <translation></translation>
     </message>
     <message>
-        <location line="-60"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-65"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>U</source>
         <translatorcomment>Unit，单位</translatorcomment>
         <translation></translation>
     </message>
     <message>
-        <location line="-59"/>
-        <location line="+4"/>
-        <location line="+16"/>
-        <location line="+4"/>
-        <location line="+16"/>
-        <location line="+4"/>
-        <location line="+16"/>
-        <location line="+4"/>
         <source>PostDate</source>
         <translation>日期</translation>
     </message>
@@ -722,26 +875,26 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">左比率</translation>
     </message>
     <message>
-        <location line="-56"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-57"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>LhsDebit</source>
         <translation>左借方</translation>
     </message>
     <message>
-        <location line="-59"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-65"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>LhsCredit</source>
         <translation>左贷方</translation>
     </message>
     <message>
-        <location line="-56"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-58"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>RhsNode</source>
         <translation>右节点</translation>
     </message>
@@ -750,28 +903,27 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">右比率</translation>
     </message>
     <message>
-        <location line="-53"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-38"/>
+        <location line="+22"/>
         <source>RelatedNode</source>
         <translation>关联</translation>
     </message>
     <message>
-        <location line="-39"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-44"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>Remainder</source>
         <translation>余数</translation>
     </message>
     <message>
-        <location line="-61"/>
-        <location line="+12"/>
-        <location line="+8"/>
-        <location line="+12"/>
-        <location line="+8"/>
-        <location line="+12"/>
-        <location line="+8"/>
-        <location line="+12"/>
+        <location line="-67"/>
+        <location line="+13"/>
+        <location line="+9"/>
+        <location line="+13"/>
+        <location line="+9"/>
+        <location line="+13"/>
+        <location line="+9"/>
+        <location line="+13"/>
         <source>S</source>
         <translatorcomment>State，状态</translatorcomment>
         <translation></translation>
@@ -789,14 +941,17 @@ Rage, rage against the dying of the light.</source>
         <translation type="obsolete">选择原始凭证</translation>
     </message>
     <message>
+        <location filename="../../mainwindow.ui" line="+237"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-19"/>
         <source>Document</source>
-        <translation type="vanished">原始凭证</translation>
+        <translation>文件</translation>
     </message>
     <message>
-        <location line="-72"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location filename="../../mainwindow.cc" line="-78"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>Debit</source>
         <translation>借方</translation>
     </message>
@@ -805,27 +960,30 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">比率</translation>
     </message>
     <message>
-        <location line="-60"/>
+        <location line="-66"/>
         <source>TransferNode</source>
         <translation>转帐</translation>
     </message>
     <message>
+        <location filename="../../mainwindow.ui" line="-108"/>
+        <location/>
+        <location filename="../../../Qt_6_5_3_for_macOS-Release/YTX_autogen/include/ui_mainwindow.h" line="-39"/>
         <source>Node</source>
-        <translation type="vanished">节点</translation>
+        <translation>节点</translation>
     </message>
     <message>
-        <location line="+1"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location filename="../../mainwindow.cc" line="+0"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>Credit</source>
         <translation>贷方</translation>
     </message>
     <message>
-        <location line="-55"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-61"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>LhsNode</source>
         <translation>左节点</translation>
     </message>
@@ -858,34 +1016,34 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">职员</translation>
     </message>
     <message>
-        <location line="-67"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-74"/>
+        <location line="+23"/>
+        <location line="+22"/>
+        <location line="+21"/>
         <source>B</source>
         <translatorcomment>Branch，分支</translatorcomment>
         <translation></translation>
     </message>
     <message>
-        <location line="-58"/>
+        <location line="-63"/>
         <source>Balance</source>
         <translation>余额</translation>
     </message>
     <message>
         <location line="-1"/>
-        <location line="+11"/>
-        <location line="+9"/>
-        <location line="+11"/>
-        <location line="+9"/>
-        <location line="+11"/>
-        <location line="+9"/>
-        <location line="+11"/>
+        <location line="+12"/>
+        <location line="+10"/>
+        <location line="+12"/>
+        <location line="+10"/>
+        <location line="+12"/>
+        <location line="+10"/>
+        <location line="+12"/>
         <source>D</source>
         <translatorcomment>Document，文档</translatorcomment>
         <translation></translation>
     </message>
     <message>
-        <location line="-323"/>
+        <location line="-338"/>
         <source>Remove %1</source>
         <translation>删除 %1</translation>
     </message>
@@ -895,52 +1053,134 @@ Rage, rage against the dying of the light.</source>
         <translation>将删除此分支，且所有直系子节点提升至同级。</translation>
     </message>
     <message>
-        <location line="+251"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="+303"/>
         <source>Ratio</source>
         <translation>比率</translation>
     </message>
     <message>
-        <location line="-53"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <source>Extension</source>
+        <translation>帐期</translation>
+    </message>
+    <message>
+        <location line="-2"/>
+        <source>Deadline</source>
+        <translation>止期</translation>
+    </message>
+    <message>
+        <source>SectionMarker</source>
+        <translation>版块</translation>
+    </message>
+    <message>
+        <location line="+9"/>
         <source>LhsRatio</source>
         <translation>左比率</translation>
     </message>
     <message>
-        <location line="-53"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="+9"/>
         <source>RhsRatio</source>
         <translation>右比率</translation>
     </message>
     <message>
-        <location line="-59"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-45"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>RhsDebit</source>
         <translation>右借方</translation>
     </message>
     <message>
-        <location line="-59"/>
-        <location line="+20"/>
-        <location line="+20"/>
-        <location line="+20"/>
+        <location line="-81"/>
+        <location line="+4"/>
+        <location line="+18"/>
+        <location line="+4"/>
+        <location line="+18"/>
+        <location line="+4"/>
+        <location line="+18"/>
+        <location line="+4"/>
+        <source>DateTime</source>
+        <translation>日期</translation>
+    </message>
+    <message>
+        <location line="-70"/>
+        <source>FXRate</source>
+        <translation>汇率</translation>
+    </message>
+    <message>
+        <source>S/R</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location line="+7"/>
+        <source>LhsFXRate</source>
+        <translation>左汇率</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>RhsFXRate</source>
+        <translation>右汇率</translation>
+    </message>
+    <message>
+        <location line="-2"/>
+        <location line="+22"/>
+        <location line="+22"/>
+        <location line="+22"/>
         <source>RhsCredit</source>
         <translation>右贷方</translation>
     </message>
     <message>
+        <location line="-80"/>
+        <location line="+11"/>
+        <location line="+11"/>
+        <location line="+11"/>
+        <location line="+11"/>
+        <location line="+11"/>
+        <location line="+11"/>
+        <location line="+11"/>
+        <source>T</source>
+        <translation></translation>
+    </message>
+    <message>
         <location line="-57"/>
+        <location line="+44"/>
         <source>Variety</source>
         <translation>种类</translation>
     </message>
     <message>
-        <location line="+566"/>
+        <location line="-44"/>
+        <location line="+44"/>
+        <source>UnitPrice</source>
+        <translation>单价</translation>
+    </message>
+    <message>
+        <location line="-42"/>
+        <location line="+44"/>
+        <source>UnitCost</source>
+        <translation>成本</translation>
+    </message>
+    <message>
+        <location line="-37"/>
+        <location line="+44"/>
+        <source>LhsUnitCost</source>
+        <translation>左成本</translation>
+    </message>
+    <message>
+        <location line="-35"/>
+        <location line="+44"/>
+        <source>RhsUnitCost</source>
+        <translation>右成本</translation>
+    </message>
+    <message>
+        <location line="-40"/>
+        <source>TaxRate</source>
+        <translation>税率</translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>PaymentTerm</source>
+        <translation>帐期</translation>
+    </message>
+    <message>
+        <location line="+657"/>
         <source>New</source>
         <translation>新建</translation>
     </message>
@@ -950,12 +1190,12 @@ Rage, rage against the dying of the light.</source>
         <translation>打开</translation>
     </message>
     <message>
+        <location line="-690"/>
         <source>Position</source>
-        <translation type="vanished">位置</translation>
+        <translation>位置</translation>
     </message>
     <message>
-        <location line="-560"/>
-        <location line="+20"/>
+        <location line="+19"/>
         <source>Name</source>
         <translation>名称</translation>
     </message>
@@ -1010,21 +1250,36 @@ Rage, rage against the dying of the light.</source>
 <context>
     <name>Preferences</name>
     <message>
-        <location filename="../../dialog/preferences.cc" line="+35"/>
+        <location filename="../../dialog/preferences.cc" line="+36"/>
         <source>Preferences</source>
         <translation>首选项</translation>
+    </message>
+    <message>
+        <location line="+183"/>
+        <source>FXRate Decimal</source>
+        <translation>汇率小数位</translation>
+    </message>
+    <message>
+        <location line="+9"/>
+        <source>Amount Decimal</source>
+        <translation>数量小数位</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Price Decimal</source>
+        <translation>价格小数位</translation>
     </message>
     <message>
         <source>Placeholder</source>
         <translation type="vanished">占位符</translation>
     </message>
     <message>
-        <location line="+146"/>
+        <location line="-44"/>
         <source>Select Directory</source>
         <translation>默认文件夹</translation>
     </message>
     <message>
-        <location filename="../../dialog/preferences.ui" line="+30"/>
+        <location filename="../../dialog/preferences.ui" line="+636"/>
         <location/>
         <source>Interface</source>
         <translation>界面</translation>
@@ -1042,7 +1297,7 @@ Rage, rage against the dying of the light.</source>
         <translation>规则</translation>
     </message>
     <message>
-        <location line="+10"/>
+        <location line="-627"/>
         <location/>
         <source>Apply</source>
         <translation>应用</translation>
@@ -1108,44 +1363,77 @@ Rage, rage against the dying of the light.</source>
         <translation>基准单位</translation>
     </message>
     <message>
-        <location line="+46"/>
+        <location line="+57"/>
+        <location/>
+        <source>Sales</source>
+        <translation>销售</translation>
+    </message>
+    <message>
+        <location line="+186"/>
+        <location/>
+        <source>Purchase</source>
+        <translation>采购</translation>
+    </message>
+    <message>
+        <source>Sales Settlement</source>
+        <translation>销售</translation>
+    </message>
+    <message>
+        <location line="-165"/>
+        <location line="+186"/>
+        <location/>
+        <source>Cash</source>
+        <translation>现结</translation>
+    </message>
+    <message>
+        <location line="-160"/>
+        <location line="+186"/>
+        <location/>
+        <source>Monthly</source>
+        <translation>月结</translation>
+    </message>
+    <message>
+        <location line="-160"/>
+        <location line="+186"/>
+        <location/>
+        <source>Pending</source>
+        <translation>挂帐</translation>
+    </message>
+    <message>
+        <location line="-163"/>
         <location/>
         <source>Status Bar</source>
         <translation>状态栏</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+24"/>
         <location/>
         <source>Static Label</source>
         <translation>静态标签</translation>
     </message>
     <message>
-        <location line="+13"/>
-        <location/>
+        <source>Purchases Settlement</source>
+        <translation>采购</translation>
+    </message>
+    <message>
         <source>Static Node</source>
         <translation>静态节点</translation>
     </message>
     <message>
-        <location line="+13"/>
+        <location line="+26"/>
         <location/>
         <source>Dynamic Label</source>
         <translation>动态标签</translation>
     </message>
     <message>
-        <location line="+13"/>
-        <location/>
         <source>Dynamic Node Lhs</source>
         <translation>动态左节点</translation>
     </message>
     <message>
-        <location line="+13"/>
-        <location/>
         <source>Operation</source>
         <translation>运算</translation>
     </message>
     <message>
-        <location line="+7"/>
-        <location/>
         <source>Dynamic Node Rhs</source>
         <translation>动态右节点</translation>
     </message>
@@ -1158,11 +1446,12 @@ Rage, rage against the dying of the light.</source>
         <translation type="vanished">小数</translation>
     </message>
     <message>
+        <location filename="../../dialog/preferences.cc" line="+33"/>
         <source>Base Currency</source>
-        <translation type="vanished">基准币种</translation>
+        <translation>基准币种</translation>
     </message>
     <message>
-        <location line="-310"/>
+        <location filename="../../dialog/preferences.ui" line="-395"/>
         <location/>
         <source>Separator</source>
         <translation>分隔符</translation>
@@ -1332,7 +1621,7 @@ Rage, rage against the dying of the light.</source>
 <context>
     <name>Search</name>
     <message>
-        <location filename="../../dialog/search.cc" line="+50"/>
+        <location filename="../../dialog/search.cc" line="+55"/>
         <source>Search</source>
         <translation>搜索</translation>
     </message>
@@ -1357,6 +1646,45 @@ Rage, rage against the dying of the light.</source>
         <location/>
         <source>Close</source>
         <translation>关闭</translation>
+    </message>
+</context>
+<context>
+    <name>SearchTableModel</name>
+    <message>
+        <location filename="../../table/searchtablemodel.cc" line="+69"/>
+        <source>S %1</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>R</source>
+        <translation></translation>
+    </message>
+</context>
+<context>
+    <name>TableModel</name>
+    <message>
+        <location filename="../../table/tablemodel.cc" line="+318"/>
+        <source>S %1</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>R</source>
+        <translation></translation>
+    </message>
+</context>
+<context>
+    <name>TransportModel</name>
+    <message>
+        <location filename="../../table/transportmodel.cc" line="+66"/>
+        <source>S %1</source>
+        <translation></translation>
+    </message>
+    <message>
+        <location line="+0"/>
+        <source>R</source>
+        <translation></translation>
     </message>
 </context>
 </TS>

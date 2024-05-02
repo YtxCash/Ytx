@@ -13,17 +13,20 @@
 #include "component/constvalue.h"
 #include "component/enumclass.h"
 #include "delegate/line.h"
+#include "delegate/spinbox.h"
 #include "delegate/state.h"
-#include "delegate/table/datetime.h"
-#include "delegate/table/document.h"
-#include "delegate/table/nodeid.h"
+#include "delegate/table/tabledatetime.h"
+#include "delegate/table/tabledbclick.h"
+#include "delegate/table/tablenodeid.h"
 #include "delegate/table/tablevalue.h"
-#include "delegate/tree/combohash.h"
-#include "delegate/tree/plaintext.h"
-#include "delegate/tree/treevalue.h"
+#include "delegate/tree/treecombo.h"
+#include "delegate/tree/treedate.h"
+#include "delegate/tree/treeplaintext.h"
+#include "delegate/tree/treevaluer.h"
 #include "dialog/about.h"
 #include "dialog/editdocument.h"
 #include "dialog/editnode.h"
+#include "dialog/edittransport.h"
 #include "dialog/preferences.h"
 #include "dialog/removenode.h"
 #include "dialog/search.h"
@@ -69,32 +72,32 @@ MainWindow::~MainWindow()
     SaveState(ui->splitter, shared_interface_, WINDOW, SPLITTER_STATE);
     SaveState(this, shared_interface_, WINDOW, MAINWINDOW_STATE);
     SaveGeometry(this, shared_interface_, WINDOW, MAINWINDOW_GEOMETRY);
-    shared_interface_->setValue(START_SECTION, static_cast<int>(start_));
+    shared_interface_->setValue(START_SECTION, std::to_underlying(start_));
 
     if (finance_tree_.view) {
-        SaveView(finance_view_, finance_data_.tree_info.node, VIEW);
-        SaveState(finance_tree_.view->header(), exclusive_interface_, finance_data_.tree_info.node, HEADER_STATE);
+        SaveView(finance_view_, finance_data_.info.node, VIEW);
+        SaveState(finance_tree_.view->header(), exclusive_interface_, finance_data_.info.node, HEADER_STATE);
 
         finance_dialog_.clear();
     }
 
     if (product_tree_.view) {
-        SaveView(product_view_, product_data_.tree_info.node, VIEW);
-        SaveState(product_tree_.view->header(), exclusive_interface_, product_data_.tree_info.node, HEADER_STATE);
+        SaveView(product_view_, product_data_.info.node, VIEW);
+        SaveState(product_tree_.view->header(), exclusive_interface_, product_data_.info.node, HEADER_STATE);
 
         product_dialog_.clear();
     }
 
     if (network_tree_.view) {
-        SaveView(network_view_, network_data_.tree_info.node, VIEW);
-        SaveState(network_tree_.view->header(), exclusive_interface_, network_data_.tree_info.node, HEADER_STATE);
+        SaveView(network_view_, network_data_.info.node, VIEW);
+        SaveState(network_tree_.view->header(), exclusive_interface_, network_data_.info.node, HEADER_STATE);
 
         network_dialog_.clear();
     }
 
     if (task_tree_.view) {
-        SaveView(task_view_, task_data_.tree_info.node, VIEW);
-        SaveState(task_tree_.view->header(), exclusive_interface_, task_data_.tree_info.node, HEADER_STATE);
+        SaveView(task_view_, task_data_.info.node, VIEW);
+        SaveState(task_tree_.view->header(), exclusive_interface_, task_data_.info.node, HEADER_STATE);
 
         product_dialog_.clear();
     }
@@ -125,6 +128,13 @@ void MainWindow::ROpenFile(CString& file_path)
         SetProductData();
         SetNetworkData();
         SetTaskData();
+
+        CreateSection(finance_tree_, tr(Finance), &finance_data_, &finance_view_, &finance_rule_);
+        CreateSection(network_tree_, tr(Network), &network_data_, &network_view_, &network_rule_);
+        CreateSection(product_tree_, tr(Product), &product_data_, &product_view_, &product_rule_);
+        CreateSection(task_tree_, tr(Task), &task_data_, &task_view_, &task_rule_);
+
+        SetDataCenter(data_center);
 
         switch (start_) {
         case Section::kFinance:
@@ -172,18 +182,14 @@ void MainWindow::dragEnterEvent(QDragEnterEvent* event)
     event->ignore();
 }
 
-void MainWindow::dropEvent(QDropEvent* event)
-{
-    auto mime_data { event->mimeData() };
-    ROpenFile(mime_data->urls().at(0).toLocalFile());
-}
+void MainWindow::dropEvent(QDropEvent* event) { ROpenFile(event->mimeData()->urls().at(0).toLocalFile()); }
 
 void MainWindow::RTreeViewDoubleClicked(const QModelIndex& index)
 {
-    if (index.column() != 0)
+    if (index.column() != 0 || section_data_->info.section == Section::kNetwork)
         return;
 
-    if (bool branch { index.siblingAtColumn(static_cast<int>(NodeColumn::kBranch)).data().toBool() })
+    if (bool branch { index.siblingAtColumn(std::to_underlying(TreeColumn::kBranch)).data().toBool() })
         return;
 
     auto node { section_tree_->model->GetNode(index) };
@@ -191,7 +197,7 @@ void MainWindow::RTreeViewDoubleClicked(const QModelIndex& index)
         return;
 
     if (!section_view_->contains(node->id))
-        CreateTable(node->name, node->id, node->node_rule);
+        CreateTable(section_data_, section_tree_->model, section_rule_, section_view_, node);
 
     SwitchTab(node->id);
 }
@@ -207,10 +213,9 @@ void MainWindow::SwitchTab(int node_id, int trans_id)
     if (trans_id == 0)
         return;
 
-    auto model { GetTableModel(view) };
-    auto index { model->TransIndex(trans_id) };
+    auto index { GetTableModel(view)->TransIndex(trans_id) };
     view->setCurrentIndex(index);
-    view->scrollTo(index.sibling(index.row(), static_cast<int>(TransColumn::kPostDate)), QAbstractItemView::PositionAtCenter);
+    view->scrollTo(index.sibling(index.row(), std::to_underlying(PartTableColumn::kDateTime)), QAbstractItemView::PositionAtCenter);
 }
 
 bool MainWindow::LockFile(CString& absolute_path, CString& complete_base_name)
@@ -227,7 +232,7 @@ bool MainWindow::LockFile(CString& absolute_path, CString& complete_base_name)
 void MainWindow::RUpdateStatusBarSpin()
 {
     auto model { section_tree_->model };
-    auto unit_symbol_hash { section_data_->tree_info.unit_symbol_hash };
+    auto unit_symbol_hash { section_data_->info.unit_symbol_hash };
     auto static_spin { status_bar_.static_spin };
     auto dynamic_spin { status_bar_.dynamic_spin };
 
@@ -284,30 +289,35 @@ void MainWindow::UpdateStatusBar()
     RUpdateStatusBarSpin();
 }
 
-void MainWindow::CreateTable(CString& node_name, int node_id, bool node_rule)
+void MainWindow::CreateTable(Data* data, TreeModel* tree_model, const SectionRule* section_rule, ViewHash* view_hash, const Node* node)
 {
+    auto node_id { node->id };
+    auto node_name { node->name };
+    auto section { data->info.section };
+
     auto view { new QTableView(this) };
-    auto model { new TableModel(&section_data_->table_info, &section_data_->table_sql, &interface_, node_id, node_rule, this) };
+    auto model { new TableModel(&data->info, section_rule, &data->table_sql, &interface_, node_id, node->node_rule, this) };
     view->setModel(model);
 
     int tab_index { ui->tabWidget->addTab(view, node_name) };
+    auto tab_bar { ui->tabWidget->tabBar() };
 
-    ui->tabWidget->tabBar()->setTabData(tab_index, QVariant::fromValue(Tab { section_data_->tree_info.section, node_id }));
-    ui->tabWidget->tabBar()->setTabToolTip(tab_index, section_tree_->model->Path(node_id));
+    tab_bar->setTabData(tab_index, QVariant::fromValue(Tab { section, node_id }));
+    tab_bar->setTabToolTip(tab_index, tree_model->Path(node_id));
 
     SetView(view);
-    SetConnect(view, model, section_tree_->model);
-    CreateDelegate(view, node_id);
+    SetConnect(view, model, tree_model, data);
+    CreateDelegate(view, tree_model, section_rule, node_id);
 
-    section_view_->insert(node_id, view);
-    SignalStation::Instance().RegisterModel(section_data_->tree_info.section, node_id, model);
+    view_hash->insert(node_id, view);
+    SignalStation::Instance().RegisterModel(section, node_id, model);
 }
 
-void MainWindow::SetConnect(QTableView* view, TableModel* table, TreeModel* tree)
+void MainWindow::SetConnect(const QTableView* view, const TableModel* table, const TreeModel* tree, const Data* data)
 {
     connect(table, &TableModel::SResizeColumnToContents, view, &QTableView::resizeColumnToContents, Qt::UniqueConnection);
 
-    connect(table, &TableModel::SDeleteOne, &SignalStation::Instance(), &SignalStation::RDeleteOne, Qt::UniqueConnection);
+    connect(table, &TableModel::SRemoveOne, &SignalStation::Instance(), &SignalStation::RRemoveOne, Qt::UniqueConnection);
     connect(table, &TableModel::SAppendOne, &SignalStation::Instance(), &SignalStation::RAppendOne, Qt::UniqueConnection);
     connect(table, &TableModel::SUpdateBalance, &SignalStation::Instance(), &SignalStation::RUpdateBalance, Qt::UniqueConnection);
     connect(table, &TableModel::SMoveMulti, &SignalStation::Instance(), &SignalStation::RMoveMulti, Qt::UniqueConnection);
@@ -317,73 +327,106 @@ void MainWindow::SetConnect(QTableView* view, TableModel* table, TreeModel* tree
 
     connect(tree, &TreeModel::SNodeRule, table, &TableModel::RNodeRule, Qt::UniqueConnection);
 
-    connect(&section_data_->table_sql, &TableSql::SRemoveMulti, table, &TableModel::RRemoveMulti, Qt::UniqueConnection);
+    connect(&data->table_sql, &TableSql::SRemoveMulti, table, &TableModel::RRemoveMulti, Qt::UniqueConnection);
 
-    connect(&section_data_->table_sql, &TableSql::SMoveMulti, &SignalStation::Instance(), &SignalStation::RMoveMulti, Qt::UniqueConnection);
-
-    connect(this, &MainWindow::SResizeColumnToContents, view, &QTableView::resizeColumnToContents, Qt::UniqueConnection);
+    connect(&data->table_sql, &TableSql::SMoveMulti, &SignalStation::Instance(), &SignalStation::RMoveMulti, Qt::UniqueConnection);
 }
 
-void MainWindow::CreateDelegate(QTableView* view, int node_id)
+void MainWindow::CreateDelegate(QTableView* view, const TreeModel* tree_model, const SectionRule* section_rule, int node_id)
 {
-    auto node { new NodeID(section_tree_->model->LeafPath(), node_id, view) };
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kRelatedNode), node);
+    auto node { new TableNodeID(tree_model->LeafPath(), node_id, view) };
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kRelatedNode), node);
 
-    auto value { new TableValue(&section_rule_->value_decimal, view) };
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kDebit), value);
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kCredit), value);
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kRemainder), value);
+    auto value { new TableValue(&section_rule->value_decimal, DMIN, DMAX, view) };
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kDebit), value);
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kCredit), value);
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kRemainder), value);
 
-    auto ratio { new TableValue(&section_rule_->ratio_decimal, view) };
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kRatio), ratio);
+    auto ratio { new TableValue(&section_rule->ratio_decimal, DMIN, DMAX, view) };
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kRatio), ratio);
 
-    auto date { new DateTime(&interface_.date_format, &section_rule_->hide_time, view) };
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kPostDate), date);
+    auto date_time { new TableDateTime(&interface_.date_format, &section_rule->hide_time, view) };
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kDateTime), date_time);
 
     auto line { new Line(view) };
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kDescription), line);
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kCode), line);
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kDescription), line);
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kCode), line);
 
     auto state { new State(view) };
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kState), state);
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kState), state);
 
-    auto document { new Document(view) };
-    view->setItemDelegateForColumn(static_cast<int>(TransColumn::kDocument), document);
-    connect(document, &Document::SUpdateDocument, this, &MainWindow::RUpdateDocument, Qt::UniqueConnection);
+    auto document { new TableDbClick(view) };
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kDocument), document);
+    connect(document, &TableDbClick::SEdit, this, &MainWindow::REditDocument, Qt::UniqueConnection);
+
+    auto sender_receiver { new TableDbClick(view) };
+    view->setItemDelegateForColumn(std::to_underlying(PartTableColumn::kTransport), sender_receiver);
+    connect(sender_receiver, &TableDbClick::SEdit, this, &MainWindow::REditTransport, Qt::UniqueConnection);
 }
 
-Tree MainWindow::CreateTree(const TreeInfo* info, TreeSql* tree_sql, const SectionRule* section_rule, const Interface* interface)
+Tree MainWindow::CreateTree(Data* data, const SectionRule* section_rule, const Interface* interface)
 {
     auto view { new QTreeView(this) };
-    auto model { new TreeModel(info, tree_sql, section_rule, section_view_, interface, this) };
+    auto model { new TreeModel(&data->info, &data->tree_sql, section_rule, section_view_, interface, this) };
     view->setModel(model);
 
     return { view, model };
 }
 
-void MainWindow::CreateDelegate(QTreeView* view)
+void MainWindow::CreateSection(Tree& tree, CString& name, Data* data, ViewHash* view_hash, const SectionRule* section_rule)
 {
-    auto line { new Line(view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kDescription), line);
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kCode), line);
+    const auto* info { &data->info };
+    auto tab_widget { ui->tabWidget };
 
-    auto plain_text { new PlainText(view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kNote), plain_text);
+    tree = CreateTree(data, section_rule, &interface_);
 
-    auto value { new TreeValue(&section_rule_->value_decimal, &section_data_->tree_info.unit_symbol_hash, view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kTotal), value);
+    auto view { tree.view };
+    auto model { tree.model };
 
-    auto unit { new ComboHash(&section_data_->tree_info.unit_hash, view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kUnit), unit);
+    CreateDelegate(view, info, section_rule);
+    SetConnect(view, model, &data->table_sql);
 
-    auto node_rule { new ComboHash(&node_rule_hash_, view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kNodeRule), node_rule);
+    tab_widget->tabBar()->setTabData(tab_widget->addTab(view, name), QVariant::fromValue(Tab { info->section, 0 }));
 
-    auto branch { new State(view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kBranch), branch);
+    RestoreState(view->header(), exclusive_interface_, info->node, HEADER_STATE);
+    RestoreView(data, model, section_rule, view_hash, VIEW);
+
+    SetView(view);
+    HideNodeColumn(view, info->section);
 }
 
-void MainWindow::SetConnect(QTreeView* view, TreeModel* model)
+void MainWindow::CreateDelegate(QTreeView* view, const Info* info, const SectionRule* section_rule)
+{
+    auto line { new Line(view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kDescription), line);
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kCode), line);
+
+    auto plain_text { new TreePlainText(view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kNote), plain_text);
+
+    auto value { new TreeValueR(&section_rule->value_decimal, &info->unit_symbol_hash, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kTotal), value);
+
+    auto extension { new SpinBox(IMIN, IMAX, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kExtension), extension);
+
+    auto ratio { new TableValue(&section_rule->ratio_decimal, DMIN, DMAX, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kRatio), ratio);
+
+    auto deadline { new TreeDate(view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kDeadline), deadline);
+
+    auto unit { new TreeCombo(&info->unit_hash, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kUnit), unit);
+
+    auto node_rule { new TreeCombo(&node_rule_hash_, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kNodeRule), node_rule);
+
+    auto branch { new State(view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kBranch), branch);
+}
+
+void MainWindow::SetConnect(const QTreeView* view, const TreeModel* model, const TableSql* table_sql)
 {
     connect(view, &QTreeView::doubleClicked, this, &MainWindow::RTreeViewDoubleClicked, Qt::UniqueConnection);
     connect(view, &QTreeView::customContextMenuRequested, this, &MainWindow::RTreeViewCustomContextMenuRequested, Qt::UniqueConnection);
@@ -393,10 +436,10 @@ void MainWindow::SetConnect(QTreeView* view, TreeModel* model)
 
     connect(model, &TreeModel::SResizeColumnToContents, view, &QTreeView::resizeColumnToContents, Qt::UniqueConnection);
 
-    connect(&section_data_->table_sql, &TableSql::SRemoveNode, model, &TreeModel::RRemoveNode, Qt::UniqueConnection);
-    connect(&section_data_->table_sql, &TableSql::SUpdateMultiTotal, model, &TreeModel::RUpdateMultiTotal, Qt::UniqueConnection);
+    connect(table_sql, &TableSql::SRemoveNode, model, &TreeModel::RRemoveNode, Qt::UniqueConnection);
+    connect(table_sql, &TableSql::SUpdateMultiTotal, model, &TreeModel::RUpdateMultiTotal, Qt::UniqueConnection);
 
-    connect(&section_data_->table_sql, &TableSql::SFreeView, this, &MainWindow::RFreeView, Qt::UniqueConnection);
+    connect(table_sql, &TableSql::SFreeView, this, &MainWindow::RFreeView, Qt::UniqueConnection);
 }
 
 void MainWindow::PrepInsertNode(QTreeView* view)
@@ -420,9 +463,7 @@ void MainWindow::InsertNode(const QModelIndex& parent, int row)
     node->unit = parent_node->unit;
     node->parent = parent_node;
 
-    auto parent_path { model->Path(parent_node->id) };
-
-    auto dialog { new EditNode(node, &interface_.separator, &section_data_->tree_info.unit_hash, false, false, parent_path, this) };
+    auto dialog { new EditNode(node, &interface_.separator, &section_data_->info, false, false, model->Path(parent_node->id), this) };
     if (dialog->exec() == QDialog::Rejected)
         return NodePool::Instance().Recycle(node);
 
@@ -439,8 +480,8 @@ void MainWindow::AppendTrans(QWidget* widget)
     int row { model->NodeRow(0) };
     QModelIndex index {};
 
-    index = (row == -1) ? (model->AppendOne() ? model->index(model->rowCount() - 1, static_cast<int>(TransColumn::kPostDate)) : index)
-                        : model->index(row, static_cast<int>(TransColumn::kRelatedNode));
+    index = (row == -1) ? (model->AppendOne() ? model->index(model->rowCount() - 1, std::to_underlying(PartTableColumn::kDateTime)) : index)
+                        : model->index(row, std::to_underlying(PartTableColumn::kRelatedNode));
 
     view->setCurrentIndex(index);
 }
@@ -480,7 +521,7 @@ void MainWindow::RemoveNode(QTreeView* view, TreeModel* model)
     if (!index.isValid())
         return;
 
-    auto node_id { index.siblingAtColumn(static_cast<int>(NodeColumn::kID)).data().toInt() };
+    auto node_id { index.siblingAtColumn(std::to_underlying(TreeColumn::kID)).data().toInt() };
     auto node { model->GetNode(node_id) };
     if (!node)
         return;
@@ -499,8 +540,7 @@ void MainWindow::RemoveNode(QTreeView* view, TreeModel* model)
         return;
     }
 
-    auto leaf_path { model->LeafPath() };
-    auto dialog { new class RemoveNode(leaf_path, node_id, this) };
+    auto dialog { new class RemoveNode(model->LeafPath(), node_id, this) };
 
     connect(dialog, &RemoveNode::SRemoveMulti, &section_data_->table_sql, &TableSql::RRemoveMulti, Qt::UniqueConnection);
     connect(dialog, &RemoveNode::SReplaceMulti, &section_data_->table_sql, &TableSql::RReplaceMulti, Qt::UniqueConnection);
@@ -516,6 +556,13 @@ void MainWindow::DeleteTrans(QWidget* widget)
 
     auto model { GetTableModel(view) };
     auto index { view->currentIndex() };
+    auto trans { model->GetTrans(index) };
+
+    if (*trans->transport == -1)
+        return;
+
+    if (*trans->transport == 1)
+        RDeleteLocation(*trans->location);
 
     if (model && index.isValid()) {
         int row { index.row() };
@@ -543,7 +590,7 @@ void MainWindow::RemoveView(TreeModel* model, const QModelIndex& index, int node
     if (view) {
         FreeView(view);
         section_view_->remove(node_id);
-        SignalStation::Instance().DeregisterModel(section_data_->tree_info.section, node_id);
+        SignalStation::Instance().DeregisterModel(section_data_->info.section, node_id);
     }
 }
 
@@ -558,9 +605,9 @@ void MainWindow::SaveView(const ViewHash& hash, CString& section_name, CString& 
     exclusive_interface_->setValue(QString("%1/%2").arg(section_name, property), list);
 }
 
-void MainWindow::RestoreView(CString& section_name, CString& property)
+void MainWindow::RestoreView(Data* data, TreeModel* tree_model, const SectionRule* section_rule, ViewHash* view_hash, CString& property)
 {
-    auto variant { exclusive_interface_->value(QString("%1/%2").arg(section_name, property)) };
+    auto variant { exclusive_interface_->value(QString("%1/%2").arg(data->info.node, property)) };
 
     QList<int> list {};
 
@@ -570,13 +617,12 @@ void MainWindow::RestoreView(CString& section_name, CString& property)
             list.emplaceBack(node_id.toInt());
     }
 
-    auto model { section_tree_->model };
     const Node* node {};
 
     for (const int& node_id : list) {
-        node = model->GetNode(node_id);
+        node = tree_model->GetNode(node_id);
         if (node && !node->branch)
-            CreateTable(node->name, node->id, node->node_rule);
+            CreateTable(data, tree_model, section_rule, view_hash, node);
     }
 }
 
@@ -590,9 +636,8 @@ void MainWindow::Recent()
     for (auto& file : recent_list_) {
         if (QFile::exists(file)) {
             auto action { recent_menu->addAction(file) };
-            valid_list.emplaceBack(file);
-
             connect(action, &QAction::triggered, [file, this]() { ROpenFile(file); });
+            valid_list.emplaceBack(file);
         }
     }
 
@@ -602,6 +647,20 @@ void MainWindow::Recent()
     }
 
     SetClearMenuAction();
+}
+
+void MainWindow::HideStatusBar(Section section)
+{
+    switch (section) {
+    case Section::kNetwork:
+        status_bar_.dynamic_spin->hide();
+        status_bar_.static_spin->hide();
+        break;
+    default:
+        status_bar_.dynamic_spin->show();
+        status_bar_.static_spin->show();
+        break;
+    }
 }
 
 void MainWindow::RemoveBranch(TreeModel* model, const QModelIndex& index, int node_id)
@@ -621,13 +680,13 @@ void MainWindow::RTabCloseRequested(int index)
     if (index == 0)
         return;
 
-    int node_id { ui->tabWidget->tabBar()->tabData(index).value<Tab>().node };
+    int node_id { ui->tabWidget->tabBar()->tabData(index).value<Tab>().node_id };
     auto view { section_view_->value(node_id) };
 
     FreeView(view);
     section_view_->remove(node_id);
 
-    SignalStation::Instance().DeregisterModel(section_data_->table_info.section, node_id);
+    SignalStation::Instance().DeregisterModel(section_data_->info.section, node_id);
 }
 
 template <typename T>
@@ -648,16 +707,19 @@ void MainWindow::FreeView(T*& view)
 
 void MainWindow::SetTabWidget()
 {
-    ui->tabWidget->tabBar()->setDocumentMode(true);
-    ui->tabWidget->tabBar()->setExpanding(false);
-    ui->tabWidget->setMovable(true);
-    ui->tabWidget->setTabsClosable(true);
-    ui->tabWidget->setElideMode(Qt::ElideNone);
-    ui->tabWidget->tabBar()->setTabButton(0, QTabBar::LeftSide, nullptr);
+    auto tab_widget { ui->tabWidget };
+    auto tab_bar { tab_widget->tabBar() };
+
+    tab_bar->setDocumentMode(true);
+    tab_bar->setExpanding(false);
+    tab_bar->setTabButton(0, QTabBar::LeftSide, nullptr);
+
+    tab_widget->setMovable(true);
+    tab_widget->setTabsClosable(true);
+    tab_widget->setElideMode(Qt::ElideNone);
 
     ui->rBtnPurchase->setHidden(true);
     ui->rBtnSales->setHidden(true);
-
     ui->splitter->setCollapsible(1, true);
 
     start_ = Section(shared_interface_->value(START_SECTION, 0).toInt());
@@ -687,32 +749,20 @@ void MainWindow::SetView(QTableView* view)
     view->setSelectionBehavior(QAbstractItemView::SelectRows);
     view->setAlternatingRowColors(true);
     view->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::CurrentChanged);
-    view->setColumnHidden(static_cast<int>(TransColumn::kID), true);
+    view->setColumnHidden(std::to_underlying(PartTableColumn::kID), true);
 
     auto h_header { view->horizontalHeader() };
-    auto count { view->model()->columnCount() };
-
-    for (int column = 0; column != count; ++column) {
-        TransColumn x { column };
-
-        switch (x) {
-        case TransColumn::kDescription:
-            h_header->setSectionResizeMode(column, QHeaderView::Stretch);
-            break;
-        default:
-            h_header->setSectionResizeMode(column, QHeaderView::ResizeToContents);
-            break;
-        }
-    }
+    h_header->setSectionResizeMode(QHeaderView::ResizeToContents);
+    h_header->setSectionResizeMode(std::to_underlying(PartTableColumn::kDescription), QHeaderView::Stretch);
 
     auto v_header { view->verticalHeader() };
     v_header->setDefaultSectionSize(ROW_HEIGHT);
     v_header->setSectionResizeMode(QHeaderView::Fixed);
-    view->verticalHeader()->setHidden(true);
+    v_header->setHidden(true);
 
     view->scrollToBottom();
     view->setCurrentIndex(QModelIndex());
-    view->sortByColumn(static_cast<int>(TransColumn::kPostDate), Qt::AscendingOrder);
+    view->sortByColumn(std::to_underlying(PartTableColumn::kDateTime), Qt::AscendingOrder);
 }
 
 void MainWindow::SetConnect()
@@ -721,13 +771,16 @@ void MainWindow::SetConnect()
     connect(ui->actionRemove, &QAction::triggered, this, &MainWindow::RRemoveTriggered, Qt::UniqueConnection);
     connect(ui->actionAppend, &QAction::triggered, this, &MainWindow::RPrepAppendTriggered, Qt::UniqueConnection);
     connect(ui->actionJump, &QAction::triggered, this, &MainWindow::RJumpTriggered, Qt::UniqueConnection);
-    connect(ui->actionEdit, &QAction::triggered, this, &MainWindow::REditTriggered, Qt::UniqueConnection);
     connect(ui->actionSearch, &QAction::triggered, this, &MainWindow::RSearchTriggered, Qt::UniqueConnection);
     connect(ui->actionPreferences, &QAction::triggered, this, &MainWindow::RPreferencesTriggered, Qt::UniqueConnection);
     connect(ui->actionAbout, &QAction::triggered, this, &MainWindow::RAboutTriggered, Qt::UniqueConnection);
     connect(ui->actionNew, &QAction::triggered, this, &MainWindow::RNewTriggered, Qt::UniqueConnection);
     connect(ui->actionOpen, &QAction::triggered, this, &MainWindow::ROpenTriggered, Qt::UniqueConnection);
     connect(ui->actionClearMenu, &QAction::triggered, this, &MainWindow::RClearMenuTriggered, Qt::UniqueConnection);
+
+    connect(ui->actionDocument, &QAction::triggered, this, &MainWindow::REditDocument, Qt::UniqueConnection);
+    connect(ui->actionNode, &QAction::triggered, this, &MainWindow::REditNode, Qt::UniqueConnection);
+    connect(ui->actionTransport, &QAction::triggered, this, &MainWindow::REditTransport, Qt::UniqueConnection);
 
     connect(ui->tabWidget, &QTabWidget::tabCloseRequested, this, &MainWindow::RTabCloseRequested, Qt::UniqueConnection);
     connect(ui->tabWidget, &QTabWidget::tabBarDoubleClicked, this, &MainWindow::RTabBarDoubleClicked, Qt::UniqueConnection);
@@ -740,19 +793,18 @@ void MainWindow::SetConnect()
 void MainWindow::SetFinanceData()
 {
     auto section { Section::kFinance };
-    auto node { FINANCE };
-    auto path { FINANCE_PATH };
-    auto transaction { FINANCE_TRANSACTION };
+    auto& info { finance_data_.info };
 
-    auto& tree_info { finance_data_.tree_info };
-    tree_info.section = section;
-    tree_info.node = node;
+    info.section = section;
+    info.node = FINANCE;
+    info.path = FINANCE_PATH;
+    info.transaction = FINANCE_TRANSACTION;
 
     QStringList unit_list { "CNY", "HKD", "USD", "GBP", "JPY", "CAD", "AUD", "EUR" };
-    auto& unit_hash { tree_info.unit_hash };
+    auto& unit_hash { info.unit_hash };
 
     QStringList unit_symbol_list { "¥", "$", "$", "£", "¥", "$", "$", "€" };
-    auto& unit_symbol_hash { tree_info.unit_symbol_hash };
+    auto& unit_symbol_hash { info.unit_symbol_hash };
 
     for (int i = 0; i != unit_list.size(); ++i) {
         unit_hash.insert(i, unit_list.at(i));
@@ -761,93 +813,106 @@ void MainWindow::SetFinanceData()
 
     sql_.QuerySectionRule(finance_rule_, section);
 
-    finance_data_.table_info.section = section;
-    finance_data_.table_info.transaction = transaction;
-
-    finance_data_.tree_sql = TreeSql(node, path, transaction, section);
-    finance_data_.table_sql.SetData(transaction, section);
-    finance_data_.search_sql = SearchSql(node, transaction, section, finance_data_.table_sql.TransactionHash());
+    finance_data_.tree_sql = TreeSql(&info);
+    finance_data_.table_sql.SetInfo(&info);
+    finance_data_.search_sql = SearchSql(&info, finance_data_.table_sql.TransactionHash());
 }
 
 void MainWindow::SetProductData()
 {
     auto section { Section::kProduct };
-    auto node { PRODUCT };
-    auto path { PRODUCT_PATH };
-    auto transaction { PRODUCT_TRANSACTION };
+    auto& info { product_data_.info };
 
-    auto& tree_info { product_data_.tree_info };
-    tree_info.section = Section::kProduct;
-    tree_info.node = node;
+    info.section = section;
+    info.node = PRODUCT;
+    info.path = PRODUCT_PATH;
+    info.transaction = PRODUCT_TRANSACTION;
 
     QStringList unit_list { QString(), "PCS", "SET", "SF", "BX" };
-    auto& unit_hash { tree_info.unit_hash };
+    auto& unit_hash { info.unit_hash };
 
     for (int i = 0; i != unit_list.size(); ++i)
         unit_hash.insert(i, unit_list.at(i));
 
     sql_.QuerySectionRule(product_rule_, section);
 
-    product_data_.table_info.section = section;
-    product_data_.table_info.transaction = transaction;
-
-    product_data_.tree_sql = TreeSql(node, path, transaction, section);
-    product_data_.table_sql.SetData(transaction, section);
-    product_data_.search_sql = SearchSql(node, transaction, section, product_data_.table_sql.TransactionHash());
+    product_data_.tree_sql = TreeSql(&info);
+    product_data_.table_sql.SetInfo(&info);
+    product_data_.search_sql = SearchSql(&info, product_data_.table_sql.TransactionHash());
 }
 
 void MainWindow::SetNetworkData()
 {
     auto section { Section::kNetwork };
-    auto node { NETWORK };
-    auto path { NETWORK_PATH };
-    auto transaction { NETWORK_TRANSACTION };
+    auto& info { network_data_.info };
 
-    auto& tree_info { network_data_.tree_info };
-    tree_info.section = section;
-    tree_info.node = node;
+    info.section = section;
+    info.node = NETWORK;
+    info.path = NETWORK_PATH;
+    info.transaction = NETWORK_TRANSACTION;
 
     QStringList unit_list { QString(), "C", "V", "E" };
-    auto& unit_hash { tree_info.unit_hash };
+    auto& unit_hash { info.unit_hash };
 
     for (int i = 0; i != unit_list.size(); ++i)
         unit_hash.insert(i, unit_list.at(i));
 
     sql_.QuerySectionRule(network_rule_, section);
 
-    network_data_.table_info.section = section;
-    network_data_.table_info.transaction = transaction;
-
-    network_data_.tree_sql = TreeSql(node, path, transaction, section);
-    network_data_.table_sql.SetData(transaction, section);
-    network_data_.search_sql = SearchSql(node, transaction, section, network_data_.table_sql.TransactionHash());
+    network_data_.tree_sql = TreeSql(&info);
+    network_data_.table_sql.SetInfo(&info);
+    network_data_.search_sql = SearchSql(&info, network_data_.table_sql.TransactionHash());
 }
 
 void MainWindow::SetTaskData()
 {
     auto section { Section::kTask };
-    auto node { TASK };
-    auto path { TASK_PATH };
-    auto transaction { TASK_TRANSACTION };
+    auto& info { task_data_.info };
 
-    auto& tree_info { task_data_.tree_info };
-    tree_info.section = section;
-    tree_info.node = node;
+    info.section = section;
+    info.node = TASK;
+    info.path = TASK_PATH;
+    info.transaction = TASK_TRANSACTION;
 
     QStringList unit_list { QString(), "PER", "SF", "PCS", "SET", "BX" };
-    auto& unit_hash { tree_info.unit_hash };
+    auto& unit_hash { info.unit_hash };
 
     for (int i = 0; i != unit_list.size(); ++i)
         unit_hash.insert(i, unit_list.at(i));
 
     sql_.QuerySectionRule(task_rule_, section);
 
-    task_data_.table_info.section = section;
-    task_data_.table_info.transaction = transaction;
+    task_data_.tree_sql = TreeSql(&info);
+    task_data_.table_sql.SetInfo(&info);
+    task_data_.search_sql = SearchSql(&info, task_data_.table_sql.TransactionHash());
+}
 
-    task_data_.tree_sql = TreeSql(node, path, transaction, section);
-    task_data_.table_sql.SetData(transaction, section);
-    task_data_.search_sql = SearchSql(node, transaction, section, task_data_.table_sql.TransactionHash());
+void MainWindow::SetDataCenter(DataCenter& data_center)
+{
+    data_center.info_hash.insert(Section::kFinance, &finance_data_.info);
+    data_center.info_hash.insert(Section::kProduct, &product_data_.info);
+    data_center.info_hash.insert(Section::kTask, &task_data_.info);
+    data_center.info_hash.insert(Section::kNetwork, &network_data_.info);
+
+    data_center.tree_model_hash.insert(Section::kFinance, finance_tree_.model);
+    data_center.tree_model_hash.insert(Section::kProduct, product_tree_.model);
+    data_center.tree_model_hash.insert(Section::kTask, task_tree_.model);
+    data_center.tree_model_hash.insert(Section::kNetwork, network_tree_.model);
+
+    data_center.leaf_path_hash.insert(Section::kFinance, finance_tree_.model->LeafPath());
+    data_center.leaf_path_hash.insert(Section::kProduct, product_tree_.model->LeafPath());
+    data_center.leaf_path_hash.insert(Section::kTask, task_tree_.model->LeafPath());
+    data_center.leaf_path_hash.insert(Section::kNetwork, network_tree_.model->LeafPath());
+
+    data_center.section_rule_hash.insert(Section::kFinance, &finance_rule_);
+    data_center.section_rule_hash.insert(Section::kProduct, &product_rule_);
+    data_center.section_rule_hash.insert(Section::kTask, &task_rule_);
+    data_center.section_rule_hash.insert(Section::kNetwork, &network_rule_);
+
+    data_center.table_sql_hash.insert(Section::kFinance, &finance_data_.table_sql);
+    data_center.table_sql_hash.insert(Section::kProduct, &product_data_.table_sql);
+    data_center.table_sql_hash.insert(Section::kTask, &task_data_.table_sql);
+    data_center.table_sql_hash.insert(Section::kNetwork, &network_data_.table_sql);
 }
 
 void MainWindow::SetHash()
@@ -860,95 +925,106 @@ void MainWindow::SetHash()
 
 void MainWindow::SetHeader()
 {
-    finance_data_.tree_info.header = { tr("Account"), tr("ID"), tr("Code"), tr("Description"), tr("Note"), tr("R"), tr("B"), tr("U"), tr("Total"), QString() };
-    finance_data_.table_info.header = { tr("ID"), tr("PostDate"), tr("Code"), tr("Ratio"), tr("Description"), tr("D"), tr("S"), tr("TransferNode"), tr("Debit"),
-        tr("Credit"), tr("Balance") };
-    finance_data_.table_info.search_header = {
+    finance_data_.info.tree_header = { tr("Account"), tr("ID"), tr("Code"), QString(), QString(), QString(), tr("Description"), tr("Note"), tr("R"), tr("B"),
+        tr("U"), tr("Total"), QString() };
+    finance_data_.info.partial_table_header = { tr("ID"), tr("DateTime"), tr("Code"), tr("FXRate"), tr("Description"), tr("T"), tr("D"), tr("S"),
+        tr("TransferNode"), tr("Debit"), tr("Credit"), tr("Balance") };
+    finance_data_.info.table_header = {
         tr("ID"),
-        tr("PostDate"),
+        tr("DateTime"),
         tr("Code"),
         tr("LhsNode"),
-        tr("LhsRatio"),
+        tr("LhsFXRate"),
         tr("LhsDebit"),
         tr("LhsCredit"),
         tr("Description"),
+        tr("T"),
         tr("D"),
         tr("S"),
-        tr("RhsNode"),
-        tr("RhsRatio"),
-        tr("RhsDebit"),
         tr("RhsCredit"),
+        tr("RhsDebit"),
+        tr("RhsFXRate"),
+        tr("RhsNode"),
     };
 
-    product_data_.tree_info.header = { tr("Variety"), tr("ID"), tr("Code"), tr("Description"), tr("Note"), tr("R"), tr("B"), tr("U"), tr("Total"), QString() };
-    product_data_.table_info.header = { tr("ID"), tr("PostDate"), tr("Code"), tr("Ratio"), tr("Description"), tr("D"), tr("S"), tr("RelatedNode"), tr("Debit"),
-        tr("Credit"), tr("Remainder") };
-    product_data_.table_info.search_header = {
+    product_data_.info.tree_header = { tr("Variety"), tr("ID"), tr("Code"), QString(), tr("UnitPrice"), QString(), tr("Description"), tr("Note"), tr("R"),
+        tr("B"), tr("U"), tr("Total"), QString() };
+    product_data_.info.partial_table_header = { tr("ID"), tr("DateTime"), tr("Code"), tr("UnitCost"), tr("Description"), tr("T"), tr("D"), tr("S"),
+        tr("Position"), tr("Debit"), tr("Credit"), tr("Remainder") };
+    product_data_.info.table_header = {
         tr("ID"),
-        tr("PostDate"),
+        tr("DateTime"),
         tr("Code"),
         tr("LhsNode"),
-        tr("LhsRatio"),
+        tr("LhsUnitCost"),
         tr("LhsDebit"),
         tr("LhsCredit"),
         tr("Description"),
+        tr("T"),
         tr("D"),
         tr("S"),
-        tr("RhsNode"),
-        tr("RhsRatio"),
-        tr("RhsDebit"),
         tr("RhsCredit"),
+        tr("RhsDebit"),
+        tr("RhsUnitCost"),
+        tr("RhsNode"),
     };
 
-    network_data_.tree_info.header = { tr("Name"), tr("ID"), tr("Code"), tr("Description"), tr("Note"), tr("R"), tr("B"), tr("U"), tr("Total"), QString() };
-    network_data_.table_info.header = { tr("ID"), tr("PostDate"), tr("Code"), tr("Ratio"), tr("Description"), tr("D"), tr("S"), tr("RelatedNode"), tr("Debit"),
-        tr("Credit"), tr("Remainder") };
-    network_data_.table_info.search_header = {
+    network_data_.info.tree_header = { tr("Name"), tr("ID"), tr("Code"), tr("PaymentTerm"), tr("TaxRate"), tr("Deadline"), tr("Description"), tr("Note"),
+        tr("R"), tr("B"), tr("U"), tr("Total"), QString() };
+    network_data_.info.partial_table_header = { tr("ID"), tr("DateTime"), tr("Code"), tr("Ratio"), tr("Description"), tr("T"), tr("D"), tr("S"),
+        tr("RelatedNode"), tr("Debit"), tr("Credit"), tr("Remainder") };
+    network_data_.info.table_header = {
         tr("ID"),
-        tr("PostDate"),
+        tr("DateTime"),
         tr("Code"),
         tr("LhsNode"),
         tr("LhsRatio"),
         tr("LhsDebit"),
         tr("LhsCredit"),
         tr("Description"),
+        tr("T"),
         tr("D"),
         tr("S"),
-        tr("RhsNode"),
-        tr("RhsRatio"),
-        tr("RhsDebit"),
         tr("RhsCredit"),
+        tr("RhsDebit"),
+        tr("RhsRatio"),
+        tr("RhsNode"),
     };
 
-    task_data_.tree_info.header = { tr("Name"), tr("ID"), tr("Code"), tr("Description"), tr("Note"), tr("R"), tr("B"), tr("U"), tr("Total"), QString() };
-    task_data_.table_info.header = { tr("ID"), tr("PostDate"), tr("Code"), tr("Ratio"), tr("Description"), tr("D"), tr("S"), tr("RelatedNode"), tr("Debit"),
-        tr("Credit"), tr("Remainder") };
-    task_data_.table_info.search_header = {
+    task_data_.info.tree_header = { tr("Variety"), tr("ID"), tr("Code"), QString(), tr("UnitPrice"), QString(), tr("Description"), tr("Note"), tr("R"), tr("B"),
+        tr("U"), tr("Total"), QString() };
+    task_data_.info.partial_table_header = { tr("ID"), tr("DateTime"), tr("Code"), tr("UnitCost"), tr("Description"), tr("T"), tr("D"), tr("S"),
+        tr("RelatedNode"), tr("Debit"), tr("Credit"), tr("Remainder") };
+    task_data_.info.table_header = {
         tr("ID"),
-        tr("PostDate"),
+        tr("DateTime"),
         tr("Code"),
         tr("LhsNode"),
-        tr("LhsRatio"),
+        tr("LhsUnitCost"),
         tr("LhsDebit"),
         tr("LhsCredit"),
         tr("Description"),
+        tr("T"),
         tr("D"),
         tr("S"),
-        tr("RhsNode"),
-        tr("RhsRatio"),
-        tr("RhsDebit"),
         tr("RhsCredit"),
+        tr("RhsDebit"),
+        tr("RhsUnitCost"),
+        tr("RhsNode"),
     };
 }
 
 void MainWindow::SetAction()
 {
     ui->actionInsert->setIcon(QIcon(":/solarized_dark/solarized_dark/insert.png"));
-    ui->actionEdit->setIcon(QIcon(":/solarized_dark/solarized_dark/edit.png"));
-    ui->actionRemove->setIcon(QIcon(":/solarized_dark/solarized_dark/remove.png"));
+    ui->actionNode->setIcon(QIcon(":/solarized_dark/solarized_dark/edit.png"));
+    ui->actionDocument->setIcon(QIcon(":/solarized_dark/solarized_dark/edit2.png"));
+    ui->actionTransport->setIcon(QIcon(":/solarized_dark/solarized_dark/edit2.png"));
+    ui->actionRemove->setIcon(QIcon(":/solarized_dark/solarized_dark/remove2.png"));
     ui->actionAbout->setIcon(QIcon(":/solarized_dark/solarized_dark/about.png"));
     ui->actionAppend->setIcon(QIcon(":/solarized_dark/solarized_dark/append.png"));
     ui->actionJump->setIcon(QIcon(":/solarized_dark/solarized_dark/jump.png"));
+    ui->actionLocate->setIcon(QIcon(":/solarized_dark/solarized_dark/locate.png"));
     ui->actionPreferences->setIcon(QIcon(":/solarized_dark/solarized_dark/settings.png"));
     ui->actionSearch->setIcon(QIcon(":/solarized_dark/solarized_dark/search.png"));
     ui->actionNew->setIcon(QIcon(":/solarized_dark/solarized_dark/new.png"));
@@ -957,9 +1033,9 @@ void MainWindow::SetAction()
     ui->actionCheckNone->setIcon(QIcon(":/solarized_dark/solarized_dark/check-none.png"));
     ui->actionCheckReverse->setIcon(QIcon(":/solarized_dark/solarized_dark/check-reverse.png"));
 
-    ui->actionCheckAll->setProperty(CHECK, static_cast<int>(Check::kAll));
-    ui->actionCheckNone->setProperty(CHECK, static_cast<int>(Check::kNone));
-    ui->actionCheckReverse->setProperty(CHECK, static_cast<int>(Check::kReverse));
+    ui->actionCheckAll->setProperty(CHECK, std::to_underlying(Check::kAll));
+    ui->actionCheckNone->setProperty(CHECK, std::to_underlying(Check::kNone));
+    ui->actionCheckReverse->setProperty(CHECK, std::to_underlying(Check::kReverse));
 }
 
 void MainWindow::SetView(QTreeView* view)
@@ -969,28 +1045,38 @@ void MainWindow::SetView(QTreeView* view)
     view->setEditTriggers(QAbstractItemView::DoubleClicked);
     view->setDropIndicatorShown(true);
     view->setSortingEnabled(true);
-    view->setColumnHidden(static_cast<int>(NodeColumn::kID), true);
+    view->setColumnHidden(std::to_underlying(TreeColumn::kID), true);
     view->setContextMenuPolicy(Qt::CustomContextMenu);
     view->setExpandsOnDoubleClick(true);
 
     auto header { view->header() };
-    auto count { view->model()->columnCount() };
-
-    for (int column = 0; column != count; ++column) {
-        NodeColumn x { column };
-
-        switch (x) {
-        case NodeColumn::kDescription:
-            header->setSectionResizeMode(column, QHeaderView::Stretch);
-            break;
-        default:
-            header->setSectionResizeMode(column, QHeaderView::ResizeToContents);
-            break;
-        }
-    }
-
-    header->setDefaultAlignment(Qt::AlignCenter);
+    header->setSectionResizeMode(QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(std::to_underlying(TreeColumn::kDescription), QHeaderView::Stretch);
     header->setStretchLastSection(true);
+}
+
+void MainWindow::HideNodeColumn(QTreeView* view, Section section)
+{
+    switch (section) {
+    case Section::kFinance:
+        view->setColumnHidden(std::to_underlying(TreeColumn::kRatio), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kExtension), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kDeadline), true);
+        break;
+    case Section::kTask:
+        view->setColumnHidden(std::to_underlying(TreeColumn::kRatio), true);
+    case Section::kProduct:
+        view->setColumnHidden(std::to_underlying(TreeColumn::kExtension), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kDeadline), true);
+        break;
+    case Section::kNetwork:
+        view->setColumnHidden(std::to_underlying(TreeColumn::kTotal), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kNodeRule), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kUnit), true);
+        break;
+    default:
+        break;
+    }
 }
 
 void MainWindow::RPrepAppendTriggered()
@@ -1007,7 +1093,7 @@ void MainWindow::RPrepAppendTriggered()
     if (!parent_index.isValid())
         return;
 
-    bool branch { parent_index.siblingAtColumn(static_cast<int>(NodeColumn::kBranch)).data().toBool() };
+    bool branch { parent_index.siblingAtColumn(std::to_underlying(TreeColumn::kBranch)).data().toBool() };
     if (!branch)
         return;
 
@@ -1029,16 +1115,16 @@ void MainWindow::RJumpTriggered()
         return;
 
     int row { index.row() };
-    auto related_node_id { index.sibling(row, static_cast<int>(TransColumn::kRelatedNode)).data().toInt() };
+    auto related_node_id { index.sibling(row, std::to_underlying(PartTableColumn::kRelatedNode)).data().toInt() };
     if (related_node_id == 0)
         return;
 
     if (!section_view_->contains(related_node_id)) {
         auto related_node { section_tree_->model->GetNode(related_node_id) };
-        CreateTable(related_node->name, related_node_id, related_node->node_rule);
+        CreateTable(section_data_, section_tree_->model, section_rule_, section_view_, related_node);
     }
 
-    auto trans_id { index.sibling(row, static_cast<int>(TransColumn::kID)).data().toInt() };
+    auto trans_id { index.sibling(row, std::to_underlying(PartTableColumn::kID)).data().toInt() };
     SwitchTab(related_node_id, trans_id);
 }
 
@@ -1048,14 +1134,14 @@ void MainWindow::RTreeViewCustomContextMenuRequested(const QPoint& pos)
 
     auto menu = new QMenu(this);
     menu->addAction(ui->actionInsert);
-    menu->addAction(ui->actionEdit);
+    menu->addAction(ui->actionNode);
     menu->addAction(ui->actionAppend);
     menu->addAction(ui->actionRemove);
 
     menu->exec(QCursor::pos());
 }
 
-void MainWindow::REditTriggered()
+void MainWindow::REditNode()
 {
     auto widget { ui->tabWidget->currentWidget() };
     if (!widget || !IsTreeView(widget))
@@ -1079,7 +1165,8 @@ void MainWindow::REditTriggered()
     bool view_opened { section_view_->contains(node->id) };
     auto parent_path { model->Path(node->parent->id) };
 
-    auto dialog { new EditNode(&tmp_node, &interface_.separator, &section_data_->tree_info.unit_hash, node_usage, view_opened, parent_path, this) };
+    auto dialog { new EditNode(&tmp_node, &interface_.separator, &section_data_->info, node_usage, view_opened, parent_path, this) };
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     if (dialog->exec() == QDialog::Accepted)
         model->UpdateNode(&tmp_node);
 }
@@ -1094,7 +1181,7 @@ bool MainWindow::HasSelection(T* view)
     return selection_model && selection_model->hasSelection();
 }
 
-void MainWindow::RUpdateDocument()
+void MainWindow::REditDocument()
 {
     auto widget { ui->tabWidget->currentWidget() };
     if (!widget || !IsTableView(widget))
@@ -1112,9 +1199,107 @@ void MainWindow::RUpdateDocument()
     auto model { GetTableModel(view) };
     auto trans { model->GetTrans(trans_index) };
 
-    auto dialog { new EditDocument(section_data_->tree_info.section, trans, document_dir, this) };
+    auto dialog { new EditDocument(section_data_->info.section, trans, document_dir, this) };
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+
     if (dialog->exec() == QDialog::Accepted)
         section_data_->table_sql.Update(DOCUMENT, trans->document->join(SEMICOLON), *trans->id);
+}
+
+void MainWindow::RDeleteLocation(CStringList& location)
+{
+    Section section {};
+    SPTransaction transaction {};
+    TableSql* table_sql {};
+    TreeModel* tree_model {};
+
+    int trans_id {};
+    int node {};
+    double ratio {};
+    double debit {};
+    double credit {};
+
+    auto table_sql_hash { data_center.table_sql_hash };
+    auto tree_model_hash { data_center.tree_model_hash };
+
+    for (int i = 0; i != location.size(); ++i) {
+        if (i % 2 == 0)
+            section = Section(location.at(i).toInt());
+
+        if (i % 2 == 1) {
+            trans_id = location.at(i).toInt();
+
+            table_sql = table_sql_hash.value(section);
+            transaction = table_sql->Transaction(trans_id);
+            tree_model = tree_model_hash.value(section);
+
+            node = transaction->lhs_node;
+            ratio = transaction->lhs_ratio;
+            debit = transaction->lhs_debit;
+            credit = transaction->lhs_credit;
+
+            tree_model->RUpdateOneTotal(node, -ratio * debit, -ratio * credit, -debit, -credit);
+            SignalStation::Instance().RRemoveOne(section, node, trans_id);
+
+            node = transaction->rhs_node;
+            ratio = transaction->rhs_ratio;
+            debit = transaction->rhs_debit;
+            credit = transaction->rhs_credit;
+
+            tree_model->RUpdateOneTotal(node, -ratio * debit, -ratio * credit, -debit, -credit);
+            SignalStation::Instance().RRemoveOne(section, node, trans_id);
+
+            table_sql->Delete(trans_id);
+        }
+    }
+}
+
+void MainWindow::REditTransport()
+{
+    auto widget { ui->tabWidget->currentWidget() };
+    if (!widget || !IsTableView(widget))
+        return;
+
+    auto view { GetTableView(widget) };
+    if (!HasSelection(view))
+        return;
+
+    auto trans_index { view->currentIndex() };
+    if (!trans_index.isValid())
+        return;
+
+    auto trans { GetTableModel(view)->GetTrans(trans_index) };
+
+    auto dialog { new EditTransport(&section_data_->info, &interface_, trans, &data_center, this) };
+    dialog->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dialog, &EditTransport::SRetrieveOne, &SignalStation::Instance(), &SignalStation::RRetrieveOne, Qt::UniqueConnection);
+    connect(dialog, &EditTransport::SDeleteOne, this, &MainWindow::RDeleteLocation, Qt::UniqueConnection);
+    connect(dialog, &EditTransport::STransportLocation, this, &MainWindow::RTransportLocation, Qt::UniqueConnection);
+    section_dialog_->append(dialog);
+    dialog->show();
+}
+
+void MainWindow::RTransportLocation(Section section, int trans_id, int lhs_node_id, int rhs_node_id)
+{
+    switch (section) {
+    case Section::kFinance:
+        ui->rBtnFinance->setChecked(true);
+        on_rBtnFinance_clicked();
+        break;
+    case Section::kProduct:
+        ui->rBtnProduct->setChecked(true);
+        on_rBtnProduct_clicked();
+        break;
+    case Section::kTask:
+        ui->rBtnTask->setChecked(true);
+        on_rBtnTask_clicked();
+        break;
+    default:
+        break;
+    }
+
+    RTableLocation(trans_id, lhs_node_id, rhs_node_id);
 }
 
 void MainWindow::RUpdateName(const Node* node)
@@ -1131,7 +1316,7 @@ void MainWindow::RUpdateName(const Node* node)
         auto path { model->Path(node_id) };
 
         for (int index = 0; index != count; ++index) {
-            if (tab_bar->tabData(index).value<Tab>().node == node_id) {
+            if (tab_bar->tabData(index).value<Tab>().node_id == node_id) {
                 tab_bar->setTabText(index, node->name);
                 tab_bar->setTabToolTip(index, path);
             }
@@ -1157,7 +1342,7 @@ void MainWindow::RUpdateName(const Node* node)
         QString path {};
 
         for (int index = 0; index != count; ++index) {
-            node_id = tab_bar->tabData(index).value<Tab>().node;
+            node_id = tab_bar->tabData(index).value<Tab>().node_id;
 
             if (list.contains(node_id)) {
                 path = model->Path(node_id);
@@ -1186,13 +1371,13 @@ void MainWindow::RUpdateSettings(const SectionRule& section_rule, const Interfac
         }
 
         UpdateStatusBar();
-        sql_.UpdateSectionRule(section_rule, section_data_->tree_info.section);
+        sql_.UpdateSectionRule(section_rule, section_data_->info.section);
 
-        emit SResizeColumnToContents(static_cast<int>(TransColumn::kPostDate));
-        emit SResizeColumnToContents(static_cast<int>(TransColumn::kDebit));
-        emit SResizeColumnToContents(static_cast<int>(TransColumn::kCredit));
-        emit SResizeColumnToContents(static_cast<int>(TransColumn::kRemainder));
-        emit SResizeColumnToContents(static_cast<int>(TransColumn::kRatio));
+        emit SResizeColumnToContents(std::to_underlying(PartTableColumn::kDateTime));
+        emit SResizeColumnToContents(std::to_underlying(PartTableColumn::kDebit));
+        emit SResizeColumnToContents(std::to_underlying(PartTableColumn::kCredit));
+        emit SResizeColumnToContents(std::to_underlying(PartTableColumn::kRemainder));
+        emit SResizeColumnToContents(std::to_underlying(PartTableColumn::kRatio));
     }
 }
 void MainWindow::RFreeView(int node_id)
@@ -1202,7 +1387,7 @@ void MainWindow::RFreeView(int node_id)
     if (view) {
         FreeView(view);
         section_view_->remove(node_id);
-        SignalStation::Instance().DeregisterModel(section_data_->table_info.section, node_id);
+        SignalStation::Instance().DeregisterModel(section_data_->info.section, node_id);
     }
 }
 
@@ -1255,8 +1440,8 @@ void MainWindow::UpdateTranslate()
     QWidget* widget {};
     Tab tab_id {};
     auto tab_widget { ui->tabWidget };
-    auto tab_bar { ui->tabWidget->tabBar() };
-    int count { ui->tabWidget->count() };
+    auto tab_bar { tab_widget->tabBar() };
+    int count { tab_widget->count() };
 
     for (int index = 0; index != count; ++index) {
         widget = tab_widget->widget(index);
@@ -1326,7 +1511,7 @@ void MainWindow::ResourceFile()
     QString path {};
 
 #ifdef Q_OS_WIN
-    path = QCoreApplication::applicationDirPath() + "/Resources";
+    path = QCoreApplication::applicationDirPath() + "/resource";
 
     if (QDir dir(path); !dir.exists()) {
         if (!QDir::home().mkpath(path)) {
@@ -1340,7 +1525,7 @@ void MainWindow::ResourceFile()
 #if 0
     QString command { "D:/Qt/6.5.3/mingw_64/bin/rcc.exe" };
     QStringList arguments {};
-    arguments << "-binary" << "E:/Ytx/resource/resource.qrc" << "-o" << path;
+    arguments << "-binary" << "E:/YTX/resource/resource.qrc" << "-o" << path;
 
     QProcess process {};
 
@@ -1371,30 +1556,27 @@ void MainWindow::RSearchTriggered()
     if (!SqlConnection::Instance().DatabaseEnable())
         return;
 
-    auto dialog { new Search(&section_data_->tree_info, section_tree_->model, &section_data_->table_info, &section_data_->search_sql, section_rule_,
-        &section_data_->tree_info.unit_hash, &node_rule_hash_, &section_data_->tree_info.unit_symbol_hash, this) };
-
-    connect(dialog, &Search::SSearchedNode, this, &MainWindow::RSearchedNode, Qt::UniqueConnection);
-    connect(dialog, &Search::SSearchedTrans, this, &MainWindow::RSearchedTrans, Qt::UniqueConnection);
+    auto dialog { new Search(&section_data_->info, &interface_, section_tree_->model, &section_data_->search_sql, section_rule_, &node_rule_hash_, this) };
+    connect(dialog, &Search::STreeLocation, this, &MainWindow::RTreeLocation, Qt::UniqueConnection);
+    connect(dialog, &Search::STableLocation, this, &MainWindow::RTableLocation, Qt::UniqueConnection);
     connect(section_tree_->model, &TreeModel::SSearch, dialog, &Search::RSearch, Qt::UniqueConnection);
-
     dialog->setWindowFlags(Qt::Dialog | Qt::WindowStaysOnTopHint);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
     section_dialog_->append(dialog);
     dialog->show();
 }
 
-void MainWindow::RSearchedNode(int node_id)
+void MainWindow::RTreeLocation(int node_id)
 {
     auto view { section_tree_->view };
-    auto model { section_tree_->model };
     ui->tabWidget->setCurrentWidget(view);
 
-    auto index { model->GetIndex(node_id) };
+    auto index { section_tree_->model->GetIndex(node_id) };
     view->activateWindow();
     view->setCurrentIndex(index);
 }
 
-void MainWindow::RSearchedTrans(int trans_id, int lhs_node_id, int rhs_node_id)
+void MainWindow::RTableLocation(int trans_id, int lhs_node_id, int rhs_node_id)
 {
     int id { lhs_node_id };
 
@@ -1408,7 +1590,7 @@ void MainWindow::RSearchedTrans(int trans_id, int lhs_node_id, int rhs_node_id)
 
     if (!Contains(lhs_node_id) && !Contains(rhs_node_id)) {
         auto node = section_tree_->model->GetNode(lhs_node_id);
-        CreateTable(node->name, node->id, node->node_rule);
+        CreateTable(section_data_, section_tree_->model, section_rule_, section_view_, node);
     }
 
     SwitchTab(id, trans_id);
@@ -1420,10 +1602,8 @@ void MainWindow::RPreferencesTriggered()
         return;
 
     auto model { section_tree_->model };
-    auto leaf_path { model->LeafPath() };
-    auto branch_path { model->BranchPath() };
 
-    auto preference { new Preferences(&section_data_->tree_info.unit_hash, leaf_path, branch_path, &date_format_list_, interface_, *section_rule_, this) };
+    auto preference { new Preferences(&section_data_->info, model->LeafPath(), model->BranchPath(), &date_format_list_, interface_, *section_rule_, this) };
     connect(preference, &Preferences::SUpdateSettings, this, &MainWindow::RUpdateSettings, Qt::UniqueConnection);
     preference->exec();
 }
@@ -1473,12 +1653,12 @@ void MainWindow::SetStatusBar()
     status_bar_.dynamic_spin = new QDoubleSpinBox(this);
 
     status_bar_.static_spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
-    status_bar_.static_spin->setRange(MIN, MAX);
+    status_bar_.static_spin->setRange(DMIN, DMAX);
     status_bar_.static_spin->setReadOnly(true);
     status_bar_.static_spin->setGroupSeparatorShown(true);
     status_bar_.static_spin->setFocusPolicy(Qt::NoFocus);
 
-    status_bar_.dynamic_spin->setRange(MIN, MAX);
+    status_bar_.dynamic_spin->setRange(DMIN, DMAX);
     status_bar_.dynamic_spin->setButtonSymbols(QAbstractSpinBox::NoButtons);
     status_bar_.dynamic_spin->setReadOnly(true);
     status_bar_.dynamic_spin->setGroupSeparatorShown(true);
@@ -1555,56 +1735,7 @@ void MainWindow::RClearMenuTriggered()
     UpdateRecent();
 }
 
-void MainWindow::RTabBarDoubleClicked(int index)
-{
-    int node_id { ui->tabWidget->tabBar()->tabData(index).value<Tab>().node };
-    RSearchedNode(node_id);
-}
-
-void MainWindow::SwitchSection(CString& name)
-{
-    auto tab_widget { ui->tabWidget };
-    auto tab_bar { ui->tabWidget->tabBar() };
-    int count { ui->tabWidget->count() };
-
-    if (!section_tree_->view) {
-        for (int index = 0; index != count; ++index)
-            tab_widget->setTabVisible(index, false);
-
-        *section_tree_ = CreateTree(&section_data_->tree_info, &section_data_->tree_sql, section_rule_, &interface_);
-        auto view { section_tree_->view };
-
-        CreateDelegate(view);
-        SetConnect(view, section_tree_->model);
-
-        auto node { section_data_->tree_info.node };
-        int tab_index { tab_widget->addTab(view, name) };
-        Tab tab_id { start_, 0 };
-        tab_bar->setTabData(tab_index, QVariant::fromValue(tab_id));
-
-        RestoreView(node, VIEW);
-        RestoreState(view->header(), exclusive_interface_, node, HEADER_STATE);
-
-        SetView(view);
-    } else {
-        for (int index = 0; index != count; ++index) {
-            if (tab_bar->tabData(index).value<Tab>().section == start_)
-                tab_widget->setTabVisible(index, true);
-            else
-                tab_widget->setTabVisible(index, false);
-        }
-
-        if (section_dialog_) {
-            for (auto& dialog : *section_dialog_) {
-                if (dialog)
-                    dialog->setEnabled(true);
-            }
-        }
-    }
-
-    tab_widget->setCurrentWidget(section_tree_->view);
-    UpdateStatusBar();
-}
+void MainWindow::RTabBarDoubleClicked(int index) { RTreeLocation(ui->tabWidget->tabBar()->tabData(index).value<Tab>().node_id); }
 
 void MainWindow::RUpdateState()
 {
@@ -1612,11 +1743,7 @@ void MainWindow::RUpdateState()
     if (!widget || !IsTableView(widget))
         return;
 
-    auto view { GetTableView(widget) };
-    auto model { GetTableModel(view) };
-
-    auto sender_check { Check(QObject::sender()->property(CHECK).toInt()) };
-    model->UpdateState(sender_check);
+    GetTableModel(GetTableView(widget))->UpdateState(Check { QObject::sender()->property(CHECK).toInt() });
 }
 
 void MainWindow::on_rBtnFinance_clicked()
@@ -1626,12 +1753,8 @@ void MainWindow::on_rBtnFinance_clicked()
     if (!SqlConnection::Instance().DatabaseEnable())
         return;
 
-    if (section_dialog_) {
-        for (auto& dialog : *section_dialog_) {
-            if (dialog)
-                dialog->setEnabled(false);
-        }
-    }
+    SwitchDialog(section_dialog_, false);
+    SwitchTab();
 
     section_tree_ = &finance_tree_;
     section_view_ = &finance_view_;
@@ -1639,7 +1762,7 @@ void MainWindow::on_rBtnFinance_clicked()
     section_rule_ = &finance_rule_;
     section_data_ = &finance_data_;
 
-    SwitchSection(tr(Finance));
+    SwitchSection(section_data_->last_tab);
 }
 
 void MainWindow::on_rBtnTask_clicked()
@@ -1649,12 +1772,8 @@ void MainWindow::on_rBtnTask_clicked()
     if (!SqlConnection::Instance().DatabaseEnable())
         return;
 
-    if (section_dialog_) {
-        for (auto& dialog : *section_dialog_) {
-            if (dialog)
-                dialog->setEnabled(false);
-        }
-    }
+    SwitchDialog(section_dialog_, false);
+    SwitchTab();
 
     section_tree_ = &task_tree_;
     section_view_ = &task_view_;
@@ -1662,7 +1781,7 @@ void MainWindow::on_rBtnTask_clicked()
     section_rule_ = &task_rule_;
     section_data_ = &task_data_;
 
-    SwitchSection(tr(Task));
+    SwitchSection(section_data_->last_tab);
 }
 
 void MainWindow::on_rBtnNetwork_clicked()
@@ -1672,12 +1791,8 @@ void MainWindow::on_rBtnNetwork_clicked()
     if (!SqlConnection::Instance().DatabaseEnable())
         return;
 
-    if (section_dialog_) {
-        for (auto& dialog : *section_dialog_) {
-            if (dialog)
-                dialog->setEnabled(false);
-        }
-    }
+    SwitchDialog(section_dialog_, false);
+    SwitchTab();
 
     section_tree_ = &network_tree_;
     section_view_ = &network_view_;
@@ -1685,7 +1800,7 @@ void MainWindow::on_rBtnNetwork_clicked()
     section_rule_ = &network_rule_;
     section_data_ = &network_data_;
 
-    SwitchSection(tr(Network));
+    SwitchSection(section_data_->last_tab);
 }
 
 void MainWindow::on_rBtnProduct_clicked()
@@ -1695,12 +1810,8 @@ void MainWindow::on_rBtnProduct_clicked()
     if (!SqlConnection::Instance().DatabaseEnable())
         return;
 
-    if (section_dialog_) {
-        for (auto& dialog : *section_dialog_) {
-            if (dialog)
-                dialog->setEnabled(false);
-        }
-    }
+    SwitchDialog(section_dialog_, false);
+    SwitchTab();
 
     section_tree_ = &product_tree_;
     section_view_ = &product_view_;
@@ -1708,5 +1819,69 @@ void MainWindow::on_rBtnProduct_clicked()
     section_rule_ = &product_rule_;
     section_data_ = &product_data_;
 
-    SwitchSection(tr(Product));
+    SwitchSection(section_data_->last_tab);
+}
+
+void MainWindow::SwitchSection(const Tab& last_tab)
+{
+    auto tab_widget { ui->tabWidget };
+    auto tab_bar { tab_widget->tabBar() };
+    int count { tab_widget->count() };
+    Tab tab {};
+
+    for (int index = 0; index != count; ++index) {
+        tab = tab_bar->tabData(index).value<Tab>();
+        tab.section == start_ ? tab_widget->setTabVisible(index, true) : tab_widget->setTabVisible(index, false);
+
+        if (tab == last_tab)
+            tab_widget->setCurrentIndex(index);
+    }
+
+    SwitchDialog(section_dialog_, true);
+    UpdateStatusBar();
+    HideStatusBar(section_data_->info.section);
+}
+
+void MainWindow::SwitchDialog(QList<PDialog>* dialog_list, bool enable)
+{
+    if (dialog_list) {
+        for (auto dialog : *dialog_list)
+            if (dialog)
+                dialog->setVisible(enable);
+    }
+}
+
+void MainWindow::SwitchTab()
+{
+    if (section_data_) {
+        auto index { ui->tabWidget->currentIndex() };
+        section_data_->last_tab = ui->tabWidget->tabBar()->tabData(index).value<Tab>();
+    }
+}
+
+void MainWindow::on_actionLocate_triggered()
+{
+    auto widget { ui->tabWidget->currentWidget() };
+    if (!widget || !IsTableView(widget))
+        return;
+
+    auto view { GetTableView(widget) };
+    if (!HasSelection(view))
+        return;
+
+    auto index { view->currentIndex() };
+    if (!index.isValid())
+        return;
+
+    int row { index.row() };
+    auto transport { index.sibling(row, std::to_underlying(PartTableColumn::kTransport)).data().toString() };
+    if (transport.isEmpty())
+        return;
+
+    const auto* location { GetTableModel(view)->GetTrans(index)->location };
+    Section section { location->at(0).toInt() };
+    int trans_id { location->at(1).toInt() };
+    auto transaction { data_center.table_sql_hash.value(section)->Transaction(trans_id) };
+
+    RTransportLocation(section, trans_id, transaction->lhs_node, transaction->rhs_node);
 }

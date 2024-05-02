@@ -5,13 +5,13 @@
 
 #include <QSqlDatabase>
 
-#include "component/enumclass.h"
+#include "component/info.h"
 #include "component/using.h"
 
 class TreeSql {
 public:
     TreeSql() = default;
-    TreeSql(CString& node, CString& path, CString& trans, Section section);
+    TreeSql(const Info* info);
 
     bool Tree(NodeHash& node_hash);
     bool Insert(int parent_id, Node* node);
@@ -29,10 +29,7 @@ private:
 
 private:
     QSqlDatabase* db_ {};
-
-    QString node_ {}; // SQL database node table name, also used as QSettings section name
-    QString path_ {}; // SQL database node path table name
-    QString trans_ {}; // SQL database node transaction table name
+    const Info* info_ {};
 };
 
 #endif // TREESQL_H

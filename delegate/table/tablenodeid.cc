@@ -1,18 +1,18 @@
-#include "nodeid.h"
+#include "tablenodeid.h"
 
 #include <QFontMetrics>
 #include <QPainter>
 
 #include "widget/combobox.h"
 
-NodeID::NodeID(CStringHash* leaf_path, int node_id, QObject* parent)
+TableNodeID::TableNodeID(CStringHash* leaf_path, int node_id, QObject* parent)
     : QStyledItemDelegate { parent }
     , leaf_path_ { leaf_path }
     , node_id_ { node_id }
 {
 }
 
-QWidget* NodeID::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
+QWidget* TableNodeID::createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(option);
     Q_UNUSED(index);
@@ -27,7 +27,7 @@ QWidget* NodeID::createEditor(QWidget* parent, const QStyleOptionViewItem& optio
     return editor;
 }
 
-void NodeID::setEditorData(QWidget* editor, const QModelIndex& index) const
+void TableNodeID::setEditorData(QWidget* editor, const QModelIndex& index) const
 {
     auto cast_editor { qobject_cast<ComboBox*>(editor) };
 
@@ -39,21 +39,21 @@ void NodeID::setEditorData(QWidget* editor, const QModelIndex& index) const
         cast_editor->setCurrentIndex(item_index);
 }
 
-void NodeID::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void TableNodeID::updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     Q_UNUSED(index);
 
     editor->setGeometry(option.rect);
 }
 
-void NodeID::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
+void TableNodeID::setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const
 {
     int key { qobject_cast<ComboBox*>(editor)->currentData().toInt() };
     last_insert_ = key;
     model->setData(index, key);
 }
 
-void NodeID::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void TableNodeID::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     QString path { leaf_path_->value(index.data().toInt()) };
     if (path.isEmpty())
@@ -63,7 +63,7 @@ void NodeID::paint(QPainter* painter, const QStyleOptionViewItem& option, const 
     painter->drawText(option.rect.adjusted(4, 0, 0, 0), Qt::AlignLeft | Qt::AlignVCenter, path);
 }
 
-QSize NodeID::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
+QSize TableNodeID::sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     QString path { leaf_path_->value(index.data().toInt()) };
     return path.isEmpty() ? QSize() : QSize(QFontMetrics(option.font).horizontalAdvance(path) + 8, option.rect.height());

@@ -8,6 +8,9 @@ struct Node {
     QString name {};
     int id {};
     QString code {};
+    double ratio {};
+    int extension {};
+    QString deadline {};
     QString description {};
     QString note {};
     bool node_rule { false };
@@ -31,6 +34,9 @@ struct Node {
         this->name = other.name;
         this->id = other.id;
         this->code = other.code;
+        this->ratio = other.ratio;
+        this->extension = other.extension;
+        this->deadline = other.deadline;
         this->description = other.description;
         this->note = other.note;
         this->node_rule = other.node_rule;
@@ -50,14 +56,16 @@ struct Node {
 
     bool operator==(const Node& other) const
     {
-        return name == other.name && id == other.id && code == other.code && description == other.description && note == other.note
-            && node_rule == other.node_rule && branch == other.branch && unit == other.unit && parent == other.parent && children == other.children;
+        return name == other.name && id == other.id && code == other.code && extension == other.extension && deadline == other.deadline
+            && description == other.description && note == other.note && node_rule == other.node_rule && branch == other.branch && unit == other.unit
+            && parent == other.parent && children == other.children;
     }
 
     bool operator!=(const Node& other) const
     {
-        return name != other.name || id != other.id || code != other.code || description != other.description || note != other.note
-            || node_rule != other.node_rule || branch != other.branch || unit != other.unit || parent != other.parent || children != other.children;
+        return name != other.name || id != other.id || code != other.code || extension != other.extension || deadline != other.deadline
+            || description != other.description || note != other.note || node_rule != other.node_rule || branch != other.branch || unit != other.unit
+            || parent != other.parent || children != other.children;
     }
 
     void Reset()
@@ -65,6 +73,9 @@ struct Node {
         name.clear();
         id = 0;
         code.clear();
+        ratio = 0.0;
+        extension = 0;
+        deadline.clear();
         description.clear();
         note.clear();
         node_rule = false;

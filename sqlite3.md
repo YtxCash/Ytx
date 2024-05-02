@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS finance_transaction
 (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  post_date      DATE,
+  date_time      DATE,
   code           TEXT,
   lhs_node       INTEGER,
   lhs_ratio      REAL       DEFAULT 1.0       CHECK (lhs_ratio  > 0),
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS product_transaction
 (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  post_date      DATE,
+  date_time      DATE,
   code           TEXT,
   lhs_node       INTEGER,
   lhs_ratio      REAL       DEFAULT 1.0       CHECK (lhs_ratio  > 0),
@@ -121,7 +121,7 @@ CREATE TABLE IF NOT EXISTS network_transaction
 (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  post_date      DATE,
+  date_time      DATE,
   code           TEXT,
   lhs_node       INTEGER,
   lhs_ratio      REAL       DEFAULT 1.0       CHECK (lhs_ratio  > 0),
@@ -166,7 +166,7 @@ CREATE TABLE IF NOT EXISTS task_transaction
 (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-  post_date      DATE,
+  date_time      DATE,
   code           TEXT,
   lhs_node       INTEGER,
   lhs_ratio      REAL       DEFAULT 1.0       CHECK (lhs_ratio  > 0),

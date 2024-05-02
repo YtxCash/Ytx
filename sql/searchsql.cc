@@ -7,11 +7,10 @@
 #include "global/sqlconnection.h"
 #include "global/transactionpool.h"
 
-SearchSql::SearchSql(CString& node, CString& transaction, Section section, SPTransactionHash* transaction_hash)
-    : db_ { SqlConnection::Instance().Allocate(section) }
-    , transaction_ { transaction }
-    , node_ { node }
+SearchSql::SearchSql(const Info* info, SPTransactionHash* transaction_hash)
+    : db_ { SqlConnection::Instance().Allocate(info->section) }
     , transaction_hash_ { transaction_hash }
+    , info_ { info }
 {
 }
 
@@ -23,13 +22,13 @@ QList<int> SearchSql::Node(CString& text)
     auto part = QString("SELECT id "
                         "FROM %1 "
                         "WHERE removed = 0 AND name LIKE '%%2%' ")
-                    .arg(node_, text);
+                    .arg(info_->node, text);
 
     if (text.isEmpty())
         part = QString("SELECT id "
                        "FROM %1 "
                        "WHERE removed = 0 ")
-                   .arg(node_);
+                   .arg(info_->node);
 
     query.prepare(part);
     query.bindValue(":text", text);
@@ -54,12 +53,13 @@ SPTransactionList SearchSql::Trans(CString& text)
     QSqlQuery query(*db_);
     query.setForwardOnly(true);
 
-    auto part = QString(
-        "SELECT id, lhs_node, lhs_ratio, lhs_debit, lhs_credit, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, description, code, document, date_time "
-        "FROM %1 "
-        "WHERE (lhs_debit = :text OR lhs_credit = :text OR rhs_debit = :text OR rhs_credit = :text OR description LIKE '%%2%') AND removed = 0 "
-        "ORDER BY date_time ")
-                    .arg(transaction_, text);
+    auto part
+        = QString("SELECT id, lhs_node, lhs_ratio, lhs_debit, lhs_credit, sender_receiver,section_marker, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, "
+                  "description, code, document, date_time "
+                  "FROM %1 "
+                  "WHERE (lhs_debit = :text OR lhs_credit = :text OR rhs_debit = :text OR rhs_credit = :text OR description LIKE '%%2%') AND removed = 0 "
+                  "ORDER BY date_time ")
+              .arg(info_->transaction, text);
 
     query.prepare(part);
     query.bindValue(":text", text);
@@ -99,6 +99,8 @@ SPTransactionList SearchSql::Trans(CString& text)
         transaction->document = query.value("document").toString().split(SEMICOLON, Qt::SkipEmptyParts);
         transaction->date_time = query.value("date_time").toString();
         transaction->state = query.value("state").toBool();
+        transaction->transport = query.value("sender_receiver").toInt();
+        transaction->location = query.value("section_marker").toString().split(SEMICOLON, Qt::SkipEmptyParts);
 
         transaction_list.emplaceBack(transaction);
     }

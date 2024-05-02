@@ -3,6 +3,7 @@
 
 #include <QDialog>
 
+#include "component/info.h"
 #include "component/using.h"
 
 namespace Ui {
@@ -13,7 +14,7 @@ class EditNode : public QDialog {
     Q_OBJECT
 
 public:
-    EditNode(Node* node, CString* separator, CStringHash* unit_hash, bool node_usage, bool view_opened, CString& parent_path, QWidget* parent = nullptr);
+    EditNode(Node* node, CString* separator, const Info* info, bool node_usage, bool view_opened, CString& parent_path, QWidget* parent = nullptr);
     ~EditNode();
 
 private slots:
@@ -25,6 +26,8 @@ private:
     void IniConnect();
     void Data(Node* node);
     void SetData();
+
+    void CustomWidget(Section section);
 
 private:
     Ui::EditNode* ui;

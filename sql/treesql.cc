@@ -6,11 +6,9 @@
 #include "global/nodepool.h"
 #include "global/sqlconnection.h"
 
-TreeSql::TreeSql(CString& node, CString& path, CString& trans, Section section)
-    : db_ { SqlConnection::Instance().Allocate(section) }
-    , node_ { node }
-    , path_ { path }
-    , trans_ { trans }
+TreeSql::TreeSql(const Info* info)
+    : db_ { SqlConnection::Instance().Allocate(info->section) }
+    , info_ { info }
 {
 }
 
@@ -19,15 +17,15 @@ bool TreeSql::Tree(NodeHash& node_hash)
     QSqlQuery query(*db_);
     query.setForwardOnly(true);
 
-    auto part_1st = QString("SELECT name, id, code, description, note, node_rule, branch, unit "
+    auto part_1st = QString("SELECT name, id, code, ratio, extension, deadline, description, note, node_rule, branch, unit "
                             "FROM %1 "
                             "WHERE removed = 0 ")
-                        .arg(node_);
+                        .arg(info_->node);
 
     auto part_2nd = QString("SELECT ancestor, descendant "
                             "FROM %1 "
                             "WHERE distance = 1 ")
-                        .arg(path_);
+                        .arg(info_->path);
 
     query.prepare(part_1st);
     if (!query.exec()) {
@@ -57,22 +55,25 @@ bool TreeSql::Insert(int parent_id, Node* node)
 
     QSqlQuery query(*db_);
 
-    auto part_1st = QString("INSERT INTO %1 (name, code, description, note, node_rule, branch, unit) "
-                            "VALUES (:name, :code, :description, :note, :node_rule, :branch, :unit) ")
-                        .arg(node_);
+    auto part_1st = QString("INSERT INTO %1 (name, code, ratio, extension, deadline, description, note, node_rule, branch, unit) "
+                            "VALUES (:name, :code, :ratio, :extension, :deadline, :description, :note, :node_rule, :branch, :unit) ")
+                        .arg(info_->node);
 
     auto part_2nd = QString("INSERT INTO %1 (ancestor, descendant, distance) "
                             "SELECT ancestor, :node_id, distance + 1 FROM %1 "
                             "WHERE descendant = :parent "
                             "UNION ALL "
                             "SELECT :node_id, :node_id, 0 ")
-                        .arg(path_);
+                        .arg(info_->path);
 
     if (!DBTransaction([&]() {
             // 插入节点记录
             query.prepare(part_1st);
             query.bindValue(":name", node->name);
             query.bindValue(":code", node->code);
+            query.bindValue(":ratio", node->ratio);
+            query.bindValue(":extension", node->extension);
+            query.bindValue(":deadline", node->deadline);
             query.bindValue(":description", node->description);
             query.bindValue(":note", node->note);
             query.bindValue(":unit", node->unit);
@@ -115,12 +116,12 @@ bool TreeSql::Remove(int node_id, bool branch)
     auto part_1st = QString("UPDATE %1 "
                             "SET removed = 1 "
                             "WHERE id = :node_id ")
-                        .arg(node_);
+                        .arg(info_->node);
 
     auto part_2nd = QString("UPDATE %1 "
                             "SET removed = 1 "
                             "WHERE lhs_node = :node_id OR rhs_node = :node_id ")
-                        .arg(trans_);
+                        .arg(info_->transaction);
 
     if (branch)
         part_2nd = QString("WITH related_nodes AS ( "
@@ -133,7 +134,7 @@ bool TreeSql::Remove(int node_id, bool branch)
                            "SET distance = distance - 1 "
                            "WHERE ancestor IN (SELECT ancestor FROM related_nodes) AND "
                            "descendant IN (SELECT descendant FROM related_nodes) ")
-                       .arg(path_);
+                       .arg(info_->path);
 
     //     auto part_22nd = QString("UPDATE %1 "
     //                                   "SET distance = distance - 1 "
@@ -143,9 +144,9 @@ bool TreeSql::Remove(int node_id, bool branch)
     //                                   (SELECT ancestor FROM %1 " "WHERE
     //                                   descendant = :node_id AND ancestor !=
     //                                   descendant)) ")
-    //                               .arg(path_);
+    //                               .arg(info_->path);
 
-    auto part_3rd = QString("DELETE FROM %1 WHERE (descendant = :node_id OR ancestor = :node_id) AND distance !=0").arg(path_);
+    auto part_3rd = QString("DELETE FROM %1 WHERE (descendant = :node_id OR ancestor = :node_id) AND distance !=0").arg(info_->path);
 
     if (!DBTransaction([&]() {
             query.prepare(part_1st);
@@ -189,7 +190,7 @@ bool TreeSql::Update(CString& column, const QVariant& value, int node_id)
     auto part = QString("UPDATE %1 "
                         "SET %2 = :value "
                         "WHERE id = :node_id ")
-                    .arg(node_, column);
+                    .arg(info_->node, column);
 
     query.prepare(part);
     query.bindValue(":node_id", node_id);
@@ -223,14 +224,14 @@ bool TreeSql::Drag(int destination_node_id, int node_id)
                             "DELETE FROM %1 "
                             "WHERE ancestor IN (SELECT ancestor FROM related_nodes) AND "
                             "descendant IN (SELECT descendant FROM related_nodes) ")
-                        .arg(path_);
+                        .arg(info_->path);
 
     auto part_2nd = QString("INSERT INTO %1 (ancestor, descendant, distance) "
                             "SELECT fp1.ancestor, fp2.descendant, fp1.distance + fp2.distance + 1 "
                             "FROM %1 AS fp1 "
                             "INNER JOIN %1 AS fp2 "
                             "WHERE fp1.descendant = :destination_node_id AND fp2.ancestor = :node_id ")
-                        .arg(path_);
+                        .arg(info_->path);
 
     if (!DBTransaction([&]() {
             // 第一个查询
@@ -269,7 +270,7 @@ bool TreeSql::Usage(int node_id) const
 
     auto string = QString("SELECT COUNT(*) FROM %1 "
                           "WHERE (lhs_node = :node_id OR rhs_node = :node_id) AND removed = 0 ")
-                      .arg(trans_);
+                      .arg(info_->transaction);
     query.prepare(string);
     query.bindValue(":node_id", node_id);
 
@@ -299,7 +300,7 @@ void TreeSql::LeafTotal(Node* node)
                         "UNION ALL "
                         "SELECT rhs_debit, rhs_credit, rhs_ratio FROM %1 "
                         "WHERE rhs_node = (:node_id) AND removed = 0 ")
-                    .arg(trans_);
+                    .arg(info_->transaction);
 
     query.prepare(part);
     query.bindValue(":node_id", node->id);
@@ -325,6 +326,9 @@ void TreeSql::LeafTotal(Node* node)
 
         debit = query.value("debit").toDouble();
         credit = query.value("credit").toDouble();
+
+        if (info_->section == Section::kProduct || info_->section == Section::kTask)
+            ratio = 1;
 
         base_total_debit += debit * ratio;
         base_total_credit += credit * ratio;
@@ -360,6 +364,9 @@ void TreeSql::CreateNodeHash(QSqlQuery& query, NodeHash& node_hash)
         node->id = node_id;
         node->name = query.value("name").toString();
         node->description = query.value("description").toString();
+        node->ratio = query.value("ratio").toDouble();
+        node->extension = query.value("extension").toInt();
+        node->deadline = query.value("deadline").toString();
         node->note = query.value("note").toString();
         node->node_rule = query.value("node_rule").toBool();
         node->branch = query.value("branch").toBool();

@@ -16,14 +16,16 @@ public:
     void DeregisterModel(Section section, int node_id);
 
 signals:
+    void SRetrieveOne(CSPTrans& trans);
     void SAppendOne(CSPCTrans& trans);
-    void SDeleteOne(int node_id, int trans_id);
+    void SRemoveOne(int node_id, int trans_id);
     void SUpdateBalance(int node_id, int trans_id);
     void SMoveMulti(int old_node_id, int new_node_id, const QList<int>& trans_id_list);
 
 public slots:
     void RAppendOne(Section section, CSPCTrans& trans);
-    void RDeleteOne(Section section, int node_id, int trans_id);
+    void RRetrieveOne(Section section, CSPTrans& trans);
+    void RRemoveOne(Section section, int node_id, int trans_id);
     void RUpdateBalance(Section section, int node_id, int trans_id);
     void RMoveMulti(Section section, int old_node_id, int new_node_id, const QList<int>& trans_id_list);
 

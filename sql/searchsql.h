@@ -3,22 +3,21 @@
 
 #include <QSqlDatabase>
 
-#include "component/enumclass.h"
+#include "component/info.h"
 #include "component/using.h"
 
 class SearchSql {
 public:
     SearchSql() = default;
-    SearchSql(CString& node, CString& transaction, Section section, SPTransactionHash* transaction_hash);
+    SearchSql(const Info* info, SPTransactionHash* transaction_hash);
 
     QList<int> Node(CString& text);
     SPTransactionList Trans(CString& text);
 
 private:
     QSqlDatabase* db_ {};
-    QString transaction_ {}; // SQL database node transaction table name
-    QString node_ {}; // SQL database node table name, also used as QSettings section name, be carefull with it
     SPTransactionHash* transaction_hash_ {};
+    const Info* info_ {};
 };
 
 #endif // SEARCHSQL_H

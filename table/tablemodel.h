@@ -4,16 +4,17 @@
 #include <QAbstractItemModel>
 
 #include "component/enumclass.h"
+#include "component/info.h"
 #include "component/settings.h"
 #include "component/using.h"
 #include "sql/tablesql.h"
-#include "tableinfo.h"
 
 class TableModel : public QAbstractItemModel {
     Q_OBJECT
 
 public:
-    TableModel(const TableInfo* info, TableSql* sql, const Interface* interface, int node_id, bool node_rule, QObject* parent = nullptr);
+    TableModel(
+        const Info* info, const SectionRule* section_rule, TableSql* sql, const Interface* interface, int node_id, bool node_rule, QObject* parent = nullptr);
     ~TableModel();
 
 signals:
@@ -23,7 +24,7 @@ signals:
 
     // send to signal station
     void SAppendOne(Section section, CSPCTrans& trans);
-    void SDeleteOne(Section section, int node_id, int trans_id);
+    void SRemoveOne(Section section, int node_id, int trans_id);
     void SUpdateBalance(Section section, int node_id, int trans_id);
     void SMoveMulti(Section section, int old_node_id, int new_node_id, const QList<int>& trans_id_list);
 
@@ -39,7 +40,8 @@ public slots:
 
     // receive from signal station
     void RAppendOne(CSPCTrans& trans);
-    void RDeleteOne(int node_id, int trans_id);
+    void RRetrieveOne(CSPTrans& trans);
+    void RRemoveOne(int node_id, int trans_id);
     void RUpdateBalance(int node_id, int trans_id);
     void RMoveMulti(int old_node_id, int new_node_id, const QList<int>& trans_id_list);
 
@@ -92,8 +94,9 @@ private:
     SPTransList trans_list_ {};
     TableSql* sql_ {};
 
-    const TableInfo* info_ {};
+    const Info* info_ {};
     const Interface* interface_ {};
+    const SectionRule* section_rule_ {};
 
     int node_id_ {};
     bool node_rule_ {};

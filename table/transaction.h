@@ -5,6 +5,8 @@
 
 struct Transaction {
     int id {};
+    int transport {}; // -1: receiver; default 0: no transport between sections; 1: sender
+    QStringList location {}; // section; trans_id; section; trans_id;
     QString date_time {};
     QString code {};
     int lhs_node {};
@@ -28,6 +30,8 @@ struct Transaction {
     void Reset()
     {
         id = 0;
+        transport = 0;
+        location.clear();
         date_time.clear();
         code.clear();
         lhs_node = 0;
@@ -46,6 +50,8 @@ struct Transaction {
 
 struct Trans {
     int* id {};
+    int* transport {};
+    QStringList* location {};
     QString* date_time {};
     QString* code {};
     int* node {};
@@ -71,6 +77,8 @@ struct Trans {
     void Reset()
     {
         id = nullptr;
+        transport = nullptr;
+        location = nullptr;
         date_time = nullptr;
         code = nullptr;
         node = nullptr;

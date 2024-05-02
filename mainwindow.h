@@ -1,49 +1,16 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <QDoubleSpinBox>
-#include <QLabel>
 #include <QMainWindow>
-#include <QPointer>
 #include <QSettings>
 #include <QTranslator>
-#include <QTreeView>
 
 #include "component/settings.h"
+#include "component/structclass.h"
 #include "component/using.h"
 #include "sql/mainwindowsql.h"
-#include "sql/searchsql.h"
-#include "sql/tablesql.h"
-#include "sql/treesql.h"
-#include "table/tableinfo.h"
 #include "table/tablemodel.h"
-#include "tree/treemodel.h"
 #include "ui_mainwindow.h"
-
-struct Tab {
-    Section section {};
-    int node {};
-};
-
-struct Tree {
-    QTreeView* view {};
-    TreeModel* model {};
-};
-
-struct StatusBar {
-    QPointer<QLabel> static_label {};
-    QPointer<QDoubleSpinBox> static_spin {};
-    QPointer<QLabel> dynamic_label {};
-    QPointer<QDoubleSpinBox> dynamic_spin {};
-};
-
-struct Data {
-    TableInfo table_info {};
-    TableSql table_sql {};
-    TreeInfo tree_info {};
-    TreeSql tree_sql {};
-    SearchSql search_sql {};
-};
 
 template <typename T>
 concept InheritQAbstractItemView = std::is_base_of<QAbstractItemView, T>::value;
@@ -80,7 +47,6 @@ private slots:
     void RRemoveTriggered();
     void RPrepAppendTriggered();
     void RJumpTriggered();
-    void REditTriggered();
     void RAboutTriggered();
     void RPreferencesTriggered();
     void RSearchTriggered();
@@ -88,10 +54,15 @@ private slots:
     void RNewTriggered();
     void ROpenTriggered();
 
-    void RSearchedNode(int node_id);
-    void RSearchedTrans(int trans_id, int lhs_node_id, int rhs_node_id);
+    void RTreeLocation(int node_id);
+    void RTableLocation(int trans_id, int lhs_node_id, int rhs_node_id);
+    void RTransportLocation(Section section, int trans_id, int lhs_node_id, int rhs_node_id);
 
-    void RUpdateDocument();
+    void REditNode();
+    void REditTransport();
+    void REditDocument();
+    void RDeleteLocation(CStringList& location);
+
     void RUpdateSettings(const SectionRule& section_rule, const Interface& interface);
     void RUpdateName(const Node* node);
     void RUpdateStatusBarSpin();
@@ -110,6 +81,8 @@ private slots:
     void on_rBtnTask_clicked();
     void on_rBtnNetwork_clicked();
     void on_rBtnProduct_clicked();
+
+    void on_actionLocate_triggered();
 
 private:
     inline bool IsTreeView(const QWidget* widget) { return widget->inherits("QTreeView"); }
@@ -131,22 +104,30 @@ private:
     void SetNetworkData();
     void SetTaskData();
 
-    void CreateTable(CString& node_name, int node_id, bool node_rule);
-    void CreateDelegate(QTableView* view, int node_id);
-    void SetView(QTableView* view);
-    void SetConnect(QTableView* view, TableModel* table, TreeModel* tree);
+    void SetDataCenter(DataCenter& data_center);
 
-    Tree CreateTree(const TreeInfo* info, TreeSql* tree_sql, const SectionRule* section_rule, const Interface* interface);
-    void CreateDelegate(QTreeView* view);
+    void CreateTable(Data* data, TreeModel* tree_model, const SectionRule* section_rule, ViewHash* view_hash, const Node* node);
+    void CreateDelegate(QTableView* view, const TreeModel* tree_model, const SectionRule* section_rule, int node_id);
+    void SetView(QTableView* view);
+    void SetConnect(const QTableView* view, const TableModel* table, const TreeModel* tree, const Data* data);
+
+    void CreateSection(Tree& tree, CString& name, Data* data, ViewHash* view_hash, const SectionRule* section_rule);
+    void SwitchSection(const Tab& last_tab);
+    void SwitchDialog(QList<PDialog>* dialog_list, bool enable);
+    void SwitchTab();
+
+    Tree CreateTree(Data* data, const SectionRule* section_rule, const Interface* interface);
+    void CreateDelegate(QTreeView* view, const Info* info, const SectionRule* section_rule);
     void SetView(QTreeView* view);
-    void SetConnect(QTreeView* view, TreeModel* model);
+    void HideNodeColumn(QTreeView* view, Section section);
+    void SetConnect(const QTreeView* view, const TreeModel* model, const TableSql* table_sql);
 
     void PrepInsertNode(QTreeView* view);
     void InsertNode(const QModelIndex& parent, int row);
     void AppendTrans(QWidget* widget);
 
     void SwitchTab(int node_id, int trans_id = 0);
-    void SwitchSection(CString& name);
+    void HideStatusBar(Section section);
     bool LockFile(CString& absolute_path, CString& complete_base_name);
 
     void DeleteTrans(QWidget* widget);
@@ -167,7 +148,7 @@ private:
     void Recent();
 
     void SaveView(const ViewHash& hash, CString& section_name, CString& property);
-    void RestoreView(CString& section_name, CString& property);
+    void RestoreView(Data* data, TreeModel* tree_model, const SectionRule* section_rule, ViewHash* view_hash, CString& property);
 
     template <typename T>
         requires InheritQAbstractItemView<T>
@@ -204,6 +185,8 @@ private:
     QTranslator cash_translator_ {};
 
     QString dir_path_ {};
+    DataCenter data_center {};
+
     QSettings* shared_interface_ {};
     QSettings* exclusive_interface_ {};
 
@@ -215,31 +198,31 @@ private:
 
     Tree* section_tree_ {};
     ViewHash* section_view_ {};
-    QList<QDialog*>* section_dialog_ {};
+    QList<PDialog>* section_dialog_ {};
     SectionRule* section_rule_ {};
     Data* section_data_ {};
 
     Tree finance_tree_ {};
     ViewHash finance_view_ {};
-    QList<QDialog*> finance_dialog_ {};
+    QList<PDialog> finance_dialog_ {};
     SectionRule finance_rule_ {};
     Data finance_data_ {};
 
     Tree product_tree_ {};
     ViewHash product_view_ {};
-    QList<QDialog*> product_dialog_ {};
+    QList<PDialog> product_dialog_ {};
     SectionRule product_rule_ {};
     Data product_data_ {};
 
     Tree network_tree_ {};
     ViewHash network_view_ {};
-    QList<QDialog*> network_dialog_ {};
+    QList<PDialog> network_dialog_ {};
     SectionRule network_rule_ {};
     Data network_data_ {};
 
     Tree task_tree_ {};
     ViewHash task_view_ {};
-    QList<QDialog*> task_dialog_ {};
+    QList<PDialog> task_dialog_ {};
     SectionRule task_rule_ {};
     Data task_data_ {};
 };

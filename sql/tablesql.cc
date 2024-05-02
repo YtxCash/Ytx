@@ -23,7 +23,7 @@ bool TableSql::RRemoveMulti(int node_id)
     auto part = QString("UPDATE %1 "
                         "SET removed = 1 "
                         "WHERE id IN (%2) ")
-                    .arg(trans_, list.join(", "));
+                    .arg(info_->transaction, list.join(", "));
 
     query.prepare(part);
     if (!query.exec()) {
@@ -76,7 +76,7 @@ bool TableSql::RReplaceMulti(int old_node_id, int new_node_id)
                         "rhs_node = CASE "
                         "WHEN rhs_node = :old_node_id AND lhs_node != :new_node_id THEN :new_node_id "
                         "ELSE rhs_node END ")
-                    .arg(trans_);
+                    .arg(info_->transaction);
 
     query.prepare(part);
     query.bindValue(":new_node_id", new_node_id);
@@ -92,7 +92,7 @@ bool TableSql::RReplaceMulti(int old_node_id, int new_node_id)
         emit SRemoveNode(old_node_id);
     }
 
-    emit SMoveMulti(section_, old_node_id, new_node_id, node_trans.values());
+    emit SMoveMulti(info_->section, old_node_id, new_node_id, node_trans.values());
     emit SUpdateMultiTotal(QList { old_node_id, new_node_id });
 
     return true;
@@ -103,11 +103,10 @@ TableSql::TableSql(QObject* parent)
 {
 }
 
-void TableSql::SetData(CString& trans, Section section)
+void TableSql::SetInfo(const Info* info)
 {
-    db_ = SqlConnection::Instance().Allocate(section);
-    trans_ = trans;
-    section_ = section;
+    info_ = info;
+    db_ = SqlConnection::Instance().Allocate(info->section);
 }
 
 SPTransList TableSql::TransList(int node_id)
@@ -115,11 +114,12 @@ SPTransList TableSql::TransList(int node_id)
     QSqlQuery query(*db_);
     query.setForwardOnly(true);
 
-    auto part = QString(
-        "SELECT id, lhs_node, lhs_ratio, lhs_debit, lhs_credit, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, description, code, document, date_time "
-        "FROM %1 "
-        "WHERE (lhs_node = :node_id OR rhs_node = :node_id) AND removed = 0 ")
-                    .arg(trans_);
+    auto part
+        = QString("SELECT id, lhs_node, lhs_ratio, lhs_debit, lhs_credit, sender_receiver, section_marker, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, "
+                  "description, code, document, date_time "
+                  "FROM %1 "
+                  "WHERE (lhs_node = :node_id OR rhs_node = :node_id) AND removed = 0 ")
+              .arg(info_->transaction);
 
     query.prepare(part);
     query.bindValue(":node_id", node_id);
@@ -140,6 +140,8 @@ void TableSql::Convert(CSPTransaction& transaction, SPTrans& trans, bool left)
     trans->code = &transaction->code;
     trans->document = &transaction->document;
     trans->description = &transaction->description;
+    trans->location = &transaction->location;
+    trans->transport = &transaction->transport;
 
     if (left) {
         trans->node = &transaction->lhs_node;
@@ -169,12 +171,15 @@ void TableSql::Convert(CSPTransaction& transaction, SPTrans& trans, bool left)
 bool TableSql::Insert(CSPTrans& trans)
 {
     QSqlQuery query(*db_);
-    auto part = QString(
-        "INSERT INTO %1 "
-        "(date_time, lhs_node, lhs_ratio, lhs_debit, lhs_credit, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, description, code, document) "
-        "VALUES "
-        "(:date_time, :lhs_node, :lhs_ratio, :lhs_debit, :lhs_credit, :rhs_node, :rhs_ratio, :rhs_debit, :rhs_credit, :state, :description, :code, :document) ")
-                    .arg(trans_);
+    auto part = QString("INSERT INTO %1 "
+                        "(date_time, lhs_node, lhs_ratio, lhs_debit, lhs_credit, sender_receiver, section_marker, rhs_node, rhs_ratio, rhs_debit, rhs_credit, "
+                        "state, description, code, "
+                        "document) "
+                        "VALUES "
+                        "(:date_time, :lhs_node, :lhs_ratio, :lhs_debit, :lhs_credit, :sender_receiver, :section_marker, :rhs_node, :rhs_ratio, :rhs_debit, "
+                        ":rhs_credit, :state, "
+                        ":description, :code, :document) ")
+                    .arg(info_->transaction);
 
     query.prepare(part);
     query.bindValue(":date_time", *trans->date_time);
@@ -183,6 +188,8 @@ bool TableSql::Insert(CSPTrans& trans)
     query.bindValue(":lhs_debit", *trans->debit);
     query.bindValue(":lhs_credit", *trans->credit);
     query.bindValue(":rhs_node", *trans->related_node);
+    query.bindValue(":sender_receiver", *trans->transport);
+    query.bindValue(":section_marker", trans->location->join(SEMICOLON));
     query.bindValue(":rhs_ratio", *trans->related_ratio);
     query.bindValue(":rhs_debit", *trans->related_debit);
     query.bindValue(":rhs_credit", *trans->related_credit);
@@ -207,7 +214,7 @@ bool TableSql::Delete(int trans_id)
     auto part = QString("UPDATE %1 "
                         "SET removed = 1 "
                         "WHERE id = :trans_id ")
-                    .arg(trans_);
+                    .arg(info_->transaction);
 
     query.prepare(part);
     query.bindValue(":trans_id", trans_id);
@@ -235,7 +242,7 @@ bool TableSql::Update(int trans_id)
                         "rhs_debit = :rhs_debit, "
                         "rhs_credit = :rhs_credit "
                         "WHERE id = :id ")
-                    .arg(trans_);
+                    .arg(info_->transaction);
 
     query.prepare(part);
     query.bindValue(":lhs_node", transaction->lhs_node);
@@ -263,7 +270,7 @@ bool TableSql::Update(CString& column, const QVariant& value, int trans_id)
     auto part = QString("UPDATE %1 "
                         "SET %2 = :value "
                         "WHERE id = :trans_id ")
-                    .arg(trans_, column);
+                    .arg(info_->transaction, column);
 
     query.prepare(part);
     query.bindValue(":value", value);
@@ -283,12 +290,12 @@ bool TableSql::Update(CString& column, const QVariant& value, Check state)
 
     auto part = QString("UPDATE %1 "
                         "SET %2 = :value ")
-                    .arg(trans_, column);
+                    .arg(info_->transaction, column);
 
     if (state == Check::kReverse)
         part = QString("UPDATE %1 "
                        "SET %2 = NOT %2 ")
-                   .arg(trans_, column);
+                   .arg(info_->transaction, column);
 
     query.prepare(part);
     query.bindValue(":value", value);
@@ -311,11 +318,12 @@ SPTransList TableSql::TransList(int node_id, const QList<int>& trans_id_list)
     for (const int& id : trans_id_list)
         list.append(QString::number(id));
 
-    auto part = QString(
-        "SELECT id, lhs_node, lhs_ratio, lhs_debit, lhs_credit, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, description, code, document, date_time "
-        "FROM %1 "
-        "WHERE id IN (%2) AND (lhs_node = :node_id OR rhs_node = :node_id) AND removed = 0 ")
-                    .arg(trans_, list.join(", "));
+    auto part
+        = QString("SELECT id, lhs_node, lhs_ratio, lhs_debit, lhs_credit, sender_receiver, section_marker, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, "
+                  "description, code, document, date_time "
+                  "FROM %1 "
+                  "WHERE id IN (%2) AND (lhs_node = :node_id OR rhs_node = :node_id) AND removed = 0 ")
+              .arg(info_->transaction, list.join(", "));
 
     query.prepare(part);
     query.bindValue(":node_id", node_id);
@@ -328,7 +336,30 @@ SPTransList TableSql::TransList(int node_id, const QList<int>& trans_id_list)
     return QueryList(node_id, query);
 }
 
-SPTrans TableSql::Trans()
+SPTransaction TableSql::Transaction(int trans_id)
+{
+    QSqlQuery query(*db_);
+    query.setForwardOnly(true);
+
+    auto part
+        = QString("SELECT id, lhs_node, lhs_ratio, lhs_debit, lhs_credit, sender_receiver, section_marker, rhs_node, rhs_ratio, rhs_debit, rhs_credit, state, "
+                  "description, code, document, date_time "
+                  "FROM %1 "
+                  "WHERE id = :trans_id AND removed = 0 ")
+              .arg(info_->transaction);
+
+    query.prepare(part);
+    query.bindValue(":trans_id", trans_id);
+
+    if (!query.exec()) {
+        qWarning() << "Error in ConstructTable 1st" << query.lastError().text();
+        return SPTransaction();
+    }
+
+    return QueryTransaction(trans_id, query);
+}
+
+SPTrans TableSql::AllocateTrans()
 {
     last_insert_transaction_ = TransactionPool::Instance().Allocate();
     auto trans { TransPool::Instance().Allocate() };
@@ -347,7 +378,7 @@ QMultiHash<int, int> TableSql::RelatedNodeAndTrans(int node_id) const
                         "UNION ALL "
                         "SELECT rhs_node, id FROM %1 "
                         "WHERE lhs_node = :node_id AND removed = 0 ")
-                    .arg(trans_);
+                    .arg(info_->transaction);
 
     query.prepare(part);
     query.bindValue(":node_id", node_id);
@@ -405,6 +436,8 @@ SPTransList TableSql::QueryList(int node_id, QSqlQuery& query)
         transaction->document = query.value("document").toString().split(SEMICOLON, Qt::SkipEmptyParts);
         transaction->date_time = query.value("date_time").toString();
         transaction->state = query.value("state").toBool();
+        transaction->transport = query.value("sender_receiver").toInt();
+        transaction->location = query.value("section_marker").toString().split(SEMICOLON, Qt::SkipEmptyParts);
 
         transaction_hash_.insert(id, transaction);
         Convert(transaction, trans, node_id == transaction->lhs_node);
@@ -412,4 +445,36 @@ SPTransList TableSql::QueryList(int node_id, QSqlQuery& query)
     }
 
     return trans_list;
+}
+
+SPTransaction TableSql::QueryTransaction(int trans_id, QSqlQuery& query)
+{
+    if (transaction_hash_.contains(trans_id))
+        return transaction_hash_.value(trans_id);
+
+    SPTransaction transaction { TransactionPool::Instance().Allocate() };
+
+    query.next();
+
+    transaction->id = trans_id;
+
+    transaction->lhs_node = query.value("lhs_node").toInt();
+    transaction->lhs_ratio = query.value("lhs_ratio").toDouble();
+    transaction->lhs_debit = query.value("lhs_debit").toDouble();
+    transaction->lhs_credit = query.value("lhs_credit").toDouble();
+
+    transaction->rhs_node = query.value("rhs_node").toInt();
+    transaction->rhs_ratio = query.value("rhs_ratio").toDouble();
+    transaction->rhs_debit = query.value("rhs_debit").toDouble();
+    transaction->rhs_credit = query.value("rhs_credit").toDouble();
+
+    transaction->code = query.value("code").toString();
+    transaction->description = query.value("description").toString();
+    transaction->document = query.value("document").toString().split(SEMICOLON, Qt::SkipEmptyParts);
+    transaction->date_time = query.value("date_time").toString();
+    transaction->state = query.value("state").toBool();
+    transaction->transport = query.value("sender_receiver").toInt();
+    transaction->location = query.value("section_marker").toString().split(SEMICOLON, Qt::SkipEmptyParts);
+
+    return transaction;
 }

@@ -1,23 +1,17 @@
-#ifndef SEARCHTRANSMODEL_H
-#define SEARCHTRANSMODEL_H
+#ifndef SEARCHTABLEMODEL_H
+#define SEARCHTABLEMODEL_H
 
 #include <QAbstractItemModel>
 
+#include "component/info.h"
 #include "component/using.h"
 #include "sql/searchsql.h"
-#include "table/tableinfo.h"
 
-class SearchTransModel : public QAbstractItemModel {
+class SearchTableModel : public QAbstractItemModel {
     Q_OBJECT
 public:
-    SearchTransModel(const TableInfo* info, SearchSql* sql, QObject* parent = nullptr);
-    ~SearchTransModel();
-
-    SearchTransModel() = delete;
-    SearchTransModel(const SearchTransModel&) = delete;
-    SearchTransModel(SearchTransModel&&) = delete;
-    SearchTransModel& operator=(const SearchTransModel&) = delete;
-    SearchTransModel& operator=(SearchTransModel&&) = delete;
+    SearchTableModel(const Info* info, SearchSql* sql, QObject* parent = nullptr);
+    ~SearchTableModel();
 
 public:
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
@@ -37,8 +31,8 @@ public:
 private:
     SearchSql* sql_ {};
 
-    SPTransactionList trans_list_ {};
-    const TableInfo* info_ {};
+    SPTransactionList transaction_list_ {};
+    const Info* info_ {};
 };
 
-#endif // SEARCHTRANSMODEL_H
+#endif // SEARCHTABLEMODEL_H

@@ -1,24 +1,20 @@
-#ifndef TABLEVALUE_H
-#define TABLEVALUE_H
+#ifndef SPINBOX_H
+#define SPINBOX_H
 
-#include <QLocale>
 #include <QStyledItemDelegate>
 
-class TableValue : public QStyledItemDelegate {
+class SpinBox : public QStyledItemDelegate {
 public:
-    TableValue(const int* decimal, double min, double max, QObject* parent = nullptr);
+    SpinBox(int min, int max, QObject* parent = nullptr);
     QWidget* createEditor(QWidget* parent, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     void setEditorData(QWidget* editor, const QModelIndex& index) const override;
     void updateEditorGeometry(QWidget* editor, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     void setModelData(QWidget* editor, QAbstractItemModel* model, const QModelIndex& index) const override;
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
-    QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
 private:
-    const int* decimal_ {};
-    double max_ {};
-    double min_ {};
-    QLocale locale_ {};
+    int max_ {};
+    int min_ {};
 };
 
-#endif // TABLEVALUE_H
+#endif // SPINBOX_H

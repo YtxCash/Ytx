@@ -29,10 +29,10 @@ QPushButton:disabled, QLineEdit:disabled, QTableView:disabled, QHeaderView::sect
 
 /*-------------------------------------border none-----------------------------------------------*/
 
-QPushButton#pBtnLink, QDateTimeEdit,
-QTableView QComboBox, QTableView QDoubleSpinBox, QTableView QLineEdit,
+QPushButton#pBtnLink, QDateTimeEdit, QLineEdit#lineStatic, QLineEdit#lineDynamic,
+QTableView QComboBox, QTableView QDoubleSpinBox, QTableView QLineEdit, QTreeView QDoubleSpinBox,
 QTreeView::item, QStatusBar::item,
-QStatusBar QDoubleSpinBox {
+QStatusBar QDoubleSpinBox, QDialog QGroupBox {
     border: none;
 }
 
@@ -51,7 +51,7 @@ QTabBar::tab {
 
 /*-------------------------------------border add-----------------------------------------------*/
 
-QDialog QComboBox, QDialog QLineEdit {
+QDialog QComboBox, QDialog QLineEdit, QDialog QDateTimeEdit {
     border: 1px solid #93A1A1;
 }
 
@@ -145,7 +145,8 @@ QTableView {
 
 /*-------------------------------------disabled color-----------------------------------------------*/
 
-QPushButton:disabled, QCheckBox:disabled, QRadioButton:disabled, QHeaderView::section:disabled, QTableView:disabled {
+QPushButton:disabled, QCheckBox:disabled, QRadioButton:disabled, QHeaderView::section:disabled, QTableView:disabled, QLabel:disabled,
+QDoubleSpinBox:disabled, QComboBox:disabled {
     color: #586E75;
 }
 

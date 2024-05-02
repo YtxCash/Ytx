@@ -41,13 +41,13 @@ QSqlDatabase* SqlConnection::Allocate(Section section)
     }
 
     if (!hash_.contains(section)) {
-        auto db { QSqlDatabase::addDatabase(QSQLITE, QString::number(static_cast<int>(section))) };
+        auto db { QSqlDatabase::addDatabase(QSQLITE, QString::number(std::to_underlying(section))) };
         db.setDatabaseName(file_path_);
 
         if (db.open())
             hash_.insert(section, db);
         else {
-            qDebug() << "Fail to create " << file_path_ << " connection " << static_cast<int>(section);
+            qDebug() << "Fail to create " << file_path_ << " connection " << std::to_underlying(section);
             return nullptr;
         }
     }

@@ -3,11 +3,13 @@
 #include "component/constvalue.h"
 #include "global/transpool.h"
 
-TableModel::TableModel(const TableInfo* info, TableSql* sql, const Interface* interface, int node_id, bool node_rule, QObject* parent)
+TableModel::TableModel(
+    const Info* info, const SectionRule* section_rule, TableSql* sql, const Interface* interface, int node_id, bool node_rule, QObject* parent)
     : QAbstractItemModel { parent }
     , sql_ { sql }
     , info_ { info }
     , interface_ { interface }
+    , section_rule_ { section_rule }
     , node_id_ { node_id }
     , node_rule_ { node_rule }
 {
@@ -40,6 +42,8 @@ void TableModel::RAppendOne(CSPCTrans& trans)
     new_trans->code = trans->code;
     new_trans->document = trans->document;
     new_trans->state = trans->state;
+    new_trans->transport = trans->transport;
+    new_trans->location = trans->location;
 
     new_trans->related_ratio = trans->ratio;
     new_trans->related_debit = trans->debit;
@@ -61,12 +65,24 @@ void TableModel::RAppendOne(CSPCTrans& trans)
     new_trans->balance = Balance(node_rule_, *new_trans->debit, *new_trans->credit) + previous_balance;
 }
 
+void TableModel::RRetrieveOne(CSPTrans& trans)
+{
+    auto row { trans_list_.size() };
+
+    beginInsertRows(QModelIndex(), row, row);
+    trans_list_.emplaceBack(trans);
+    endInsertRows();
+
+    double previous_balance { row >= 1 ? trans_list_.at(row - 1)->balance : 0.0 };
+    trans->balance = Balance(node_rule_, *trans->debit, *trans->credit) + previous_balance;
+}
+
 bool TableModel::AppendOne(const QModelIndex& parent)
 {
     // just register trans this function
     // while set related node in setData function, register related transaction to sql_'s transaction_hash_
     auto row { trans_list_.size() };
-    auto trans { sql_->Trans() };
+    auto trans { sql_->AllocateTrans() };
 
     *trans->node = node_id_;
 
@@ -87,7 +103,7 @@ void TableModel::RUpdateBalance(int node_id, int trans_id)
         AccumulateBalance(trans_list_, index.row(), node_rule_);
 }
 
-void TableModel::RDeleteOne(int node_id, int trans_id)
+void TableModel::RRemoveOne(int node_id, int trans_id)
 {
     if (node_id_ != node_id)
         return;
@@ -128,7 +144,7 @@ bool TableModel::DeleteOne(int row, const QModelIndex& parent)
         emit SUpdateOneTotal(*trans->related_node, -t_ratio * t_debit, -t_ratio * t_credit, -t_debit, -t_credit);
 
         int trans_id { *trans->id };
-        emit SDeleteOne(info_->section, related_node_id, trans_id);
+        emit SRemoveOne(info_->section, related_node_id, trans_id);
         AccumulateBalance(trans_list_, row, node_rule_);
         sql_->Delete(trans_id);
     }
@@ -224,7 +240,7 @@ void TableModel::UpdateState(Check state)
         break;
     }
 
-    int column { static_cast<int>(TransColumn::kState) };
+    int column { std::to_underlying(PartTableColumn::kState) };
     emit dataChanged(index(0, column), index(rowCount() - 1, column));
 }
 
@@ -272,7 +288,7 @@ int TableModel::rowCount(const QModelIndex& parent) const
 int TableModel::columnCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return info_->header.size();
+    return info_->partial_table_header.size();
 }
 
 QVariant TableModel::data(const QModelIndex& index, int role) const
@@ -281,30 +297,32 @@ QVariant TableModel::data(const QModelIndex& index, int role) const
         return QVariant();
 
     auto trans { trans_list_.at(index.row()) };
-    const TransColumn kColumn { index.column() };
+    const PartTableColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case TransColumn::kID:
+    case PartTableColumn::kID:
         return *trans->id;
-    case TransColumn::kPostDate:
+    case PartTableColumn::kDateTime:
         return *trans->date_time;
-    case TransColumn::kCode:
+    case PartTableColumn::kCode:
         return *trans->code;
-    case TransColumn::kRatio:
+    case PartTableColumn::kRatio:
         return *trans->ratio;
-    case TransColumn::kDescription:
+    case PartTableColumn::kDescription:
         return *trans->description;
-    case TransColumn::kRelatedNode:
+    case PartTableColumn::kRelatedNode:
         return *trans->related_node == 0 ? QVariant() : *trans->related_node;
-    case TransColumn::kState:
+    case PartTableColumn::kState:
         return *trans->state;
-    case TransColumn::kDocument:
-        return trans->document->size() == 0 ? QVariant() : QString::number(trans->document->size());
-    case TransColumn::kDebit:
+    case PartTableColumn::kTransport:
+        return *trans->transport == 0 ? QVariant() : (*trans->transport == 1 ? tr("S %1").arg(trans->location->size() / 2) : tr("R"));
+    case PartTableColumn::kDocument:
+        return trans->document->isEmpty() ? QVariant() : QString::number(trans->document->size());
+    case PartTableColumn::kDebit:
         return *trans->debit == 0 ? QVariant() : *trans->debit;
-    case TransColumn::kCredit:
+    case PartTableColumn::kCredit:
         return *trans->credit == 0 ? QVariant() : *trans->credit;
-    case TransColumn::kRemainder:
+    case PartTableColumn::kRemainder:
         return trans->balance;
     default:
         return QVariant();
@@ -316,8 +334,8 @@ bool TableModel::setData(const QModelIndex& index, const QVariant& value, int ro
     if (!index.isValid() || role != Qt::EditRole)
         return false;
 
+    const PartTableColumn kColumn { index.column() };
     const int kRow { index.row() };
-    const TransColumn kColumn { index.column() };
 
     auto trans { trans_list_.at(kRow) };
     int old_related_node { *trans->related_node };
@@ -328,28 +346,28 @@ bool TableModel::setData(const QModelIndex& index, const QVariant& value, int ro
     bool rat_changed { false };
 
     switch (kColumn) {
-    case TransColumn::kPostDate:
+    case PartTableColumn::kDateTime:
         UpdateDateTime(trans, value.toString());
         break;
-    case TransColumn::kCode:
+    case PartTableColumn::kCode:
         UpdateCode(trans, value.toString());
         break;
-    case TransColumn::kState:
+    case PartTableColumn::kState:
         UpdateState(trans, value.toBool());
         break;
-    case TransColumn::kDescription:
+    case PartTableColumn::kDescription:
         UpdateDescription(trans, value.toString());
         break;
-    case TransColumn::kRatio:
+    case PartTableColumn::kRatio:
         rat_changed = UpdateRatio(trans, value.toDouble());
         break;
-    case TransColumn::kRelatedNode:
+    case PartTableColumn::kRelatedNode:
         tra_changed = UpdateRelatedNode(trans, value.toInt());
         break;
-    case TransColumn::kDebit:
+    case PartTableColumn::kDebit:
         deb_changed = UpdateDebit(trans, value.toDouble());
         break;
-    case TransColumn::kCredit:
+    case PartTableColumn::kCredit:
         cre_changed = UpdateCredit(trans, value.toDouble());
         break;
     default:
@@ -360,7 +378,7 @@ bool TableModel::setData(const QModelIndex& index, const QVariant& value, int ro
         if (tra_changed) {
             sql_->Insert(trans);
             AccumulateBalance(trans_list_, kRow, node_rule_);
-            emit SResizeColumnToContents(static_cast<int>(TransColumn::kRemainder));
+            emit SResizeColumnToContents(std::to_underlying(PartTableColumn::kRemainder));
             emit SAppendOne(info_->section, trans);
 
             auto ratio { *trans->ratio };
@@ -368,10 +386,10 @@ bool TableModel::setData(const QModelIndex& index, const QVariant& value, int ro
             auto credit { *trans->credit };
             emit SUpdateOneTotal(node_id_, ratio * debit, ratio * credit, debit, credit);
 
-            auto t_ratio { *trans->related_ratio };
-            auto t_debit { *trans->related_debit };
-            auto t_credit { *trans->related_credit };
-            emit SUpdateOneTotal(*trans->related_node, t_ratio * t_debit, t_ratio * t_credit, t_debit, t_credit);
+            ratio = *trans->related_ratio;
+            debit = *trans->related_debit;
+            credit = *trans->related_credit;
+            emit SUpdateOneTotal(*trans->related_node, ratio * debit, ratio * credit, debit, credit);
         }
 
         emit SResizeColumnToContents(index.column());
@@ -386,18 +404,18 @@ bool TableModel::setData(const QModelIndex& index, const QVariant& value, int ro
 
     if (deb_changed || cre_changed) {
         AccumulateBalance(trans_list_, kRow, node_rule_);
-        emit SResizeColumnToContents(static_cast<int>(TransColumn::kRemainder));
+        emit SResizeColumnToContents(std::to_underlying(PartTableColumn::kRemainder));
     }
 
     if (tra_changed) {
         sql_->Update(*trans->id);
         emit SMoveMulti(info_->section, old_related_node, *trans->related_node, QList<int> { *trans->id });
 
-        auto t_ratio { *trans->related_ratio };
-        auto t_debit { *trans->related_debit };
-        auto t_credit { *trans->related_credit };
-        emit SUpdateOneTotal(*trans->related_node, t_ratio * t_debit, t_ratio * t_credit, t_debit, t_credit);
-        emit SUpdateOneTotal(old_related_node, -t_ratio * t_debit, -t_ratio * t_credit, -t_debit, -t_credit);
+        auto ratio { *trans->related_ratio };
+        auto debit { *trans->related_debit };
+        auto credit { *trans->related_credit };
+        emit SUpdateOneTotal(*trans->related_node, ratio * debit, ratio * credit, debit, credit);
+        emit SUpdateOneTotal(old_related_node, -ratio * debit, -ratio * credit, -debit, -credit);
     }
 
     emit SResizeColumnToContents(index.column());
@@ -470,7 +488,9 @@ bool TableModel::UpdateRelatedNode(SPTrans& trans, int value)
 bool TableModel::UpdateDebit(SPTrans& trans, double value)
 {
     double debit { *trans->debit };
-    if (debit == value)
+    const double tolerance { std::pow(10, -section_rule_->value_decimal - 2) };
+
+    if (std::abs(debit - value) <= tolerance)
         return false;
 
     double credit { *trans->credit };
@@ -483,6 +503,9 @@ bool TableModel::UpdateDebit(SPTrans& trans, double value)
     double t_debit { *trans->related_debit };
     double t_credit { *trans->related_credit };
     double t_ratio { *trans->related_ratio };
+
+    if (info_->section == Section::kProduct || info_->section == Section::kTask)
+        ratio = t_ratio;
 
     *trans->related_debit = (*trans->credit) * ratio / t_ratio;
     *trans->related_credit = (*trans->debit) * ratio / t_ratio;
@@ -504,7 +527,9 @@ bool TableModel::UpdateDebit(SPTrans& trans, double value)
 bool TableModel::UpdateCredit(SPTrans& trans, double value)
 {
     double credit { *trans->credit };
-    if (credit == value)
+    const double tolerance { std::pow(10, -section_rule_->value_decimal - 2) };
+
+    if (std::abs(credit - value) <= tolerance)
         return false;
 
     double debit { *trans->debit };
@@ -517,6 +542,9 @@ bool TableModel::UpdateCredit(SPTrans& trans, double value)
     double t_debit { *trans->related_debit };
     double t_credit { *trans->related_credit };
     double t_ratio { *trans->related_ratio };
+
+    if (info_->section == Section::kProduct || info_->section == Section::kTask)
+        ratio = t_ratio;
 
     *trans->related_debit = (*trans->credit) * ratio / t_ratio;
     *trans->related_credit = (*trans->debit) * ratio / t_ratio;
@@ -537,14 +565,19 @@ bool TableModel::UpdateCredit(SPTrans& trans, double value)
 
 bool TableModel::UpdateRatio(SPTrans& trans, double value)
 {
+    const double tolerance { std::pow(10, -section_rule_->ratio_decimal - 2) };
     double ratio { *trans->ratio };
-    if (ratio == value || value <= 0)
+
+    if (std::abs(ratio - value) <= tolerance || value <= 0)
         return false;
 
     auto result { value - ratio };
     auto proportion { value / *trans->ratio };
 
     *trans->ratio = value;
+
+    if (info_->section == Section::kProduct || info_->section == Section::kTask)
+        return true;
 
     double t_debit { *trans->related_debit };
     double t_credit { *trans->related_credit };
@@ -583,7 +616,7 @@ void TableModel::AccumulateBalance(const SPTransList& list, int row, bool node_r
 QVariant TableModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-        return info_->header.at(section);
+        return info_->partial_table_header.at(section);
 
     return QVariant();
 }
@@ -591,30 +624,32 @@ QVariant TableModel::headerData(int section, Qt::Orientation orientation, int ro
 void TableModel::sort(int column, Qt::SortOrder order)
 {
     // ignore balance column
-    if (column <= -1 || column >= info_->header.size() - 1)
+    if (column <= -1 || column >= info_->partial_table_header.size() - 1)
         return;
 
     auto Compare = [column, order](SPTrans& lhs, SPTrans& rhs) -> bool {
-        const TransColumn kColumn { column };
+        const PartTableColumn kColumn { column };
 
         switch (kColumn) {
-        case TransColumn::kPostDate:
+        case PartTableColumn::kDateTime:
             return (order == Qt::AscendingOrder) ? (*lhs->date_time < *rhs->date_time) : (*lhs->date_time > *rhs->date_time);
-        case TransColumn::kCode:
+        case PartTableColumn::kCode:
             return (order == Qt::AscendingOrder) ? (*lhs->code < *rhs->code) : (*lhs->code > *rhs->code);
-        case TransColumn::kRatio:
+        case PartTableColumn::kRatio:
             return (order == Qt::AscendingOrder) ? (*lhs->ratio < *rhs->ratio) : (*lhs->ratio > *rhs->ratio);
-        case TransColumn::kDescription:
+        case PartTableColumn::kDescription:
             return (order == Qt::AscendingOrder) ? (*lhs->description < *rhs->description) : (*lhs->description > *rhs->description);
-        case TransColumn::kRelatedNode:
+        case PartTableColumn::kRelatedNode:
             return (order == Qt::AscendingOrder) ? (*lhs->related_node < *rhs->related_node) : (*lhs->related_node > *rhs->related_node);
-        case TransColumn::kState:
+        case PartTableColumn::kState:
             return (order == Qt::AscendingOrder) ? (*lhs->state < *rhs->state) : (*lhs->state > *rhs->state);
-        case TransColumn::kDocument:
+        case PartTableColumn::kTransport:
+            return (order == Qt::AscendingOrder) ? (*lhs->transport < *rhs->transport) : (*lhs->transport > *rhs->transport);
+        case PartTableColumn::kDocument:
             return (order == Qt::AscendingOrder) ? (lhs->document->size() < rhs->document->size()) : (lhs->document->size() > rhs->document->size());
-        case TransColumn::kDebit:
+        case PartTableColumn::kDebit:
             return (order == Qt::AscendingOrder) ? (*lhs->debit < *rhs->debit) : (*lhs->debit > *rhs->debit);
-        case TransColumn::kCredit:
+        case PartTableColumn::kCredit:
             return (order == Qt::AscendingOrder) ? (*lhs->credit < *rhs->credit) : (*lhs->credit > *rhs->credit);
         default:
             return false;
@@ -647,16 +682,13 @@ Qt::ItemFlags TableModel::flags(const QModelIndex& index) const
         return Qt::NoItemFlags;
 
     auto flags { QAbstractItemModel::flags(index) };
-    const TransColumn kColumn { index.column() };
+    const PartTableColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case TransColumn::kID:
-        flags &= ~Qt::ItemIsEditable;
-        break;
-    case TransColumn::kRemainder:
-        flags &= ~Qt::ItemIsEditable;
-        break;
-    case TransColumn::kDocument:
+    case PartTableColumn::kID:
+    case PartTableColumn::kRemainder:
+    case PartTableColumn::kDocument:
+    case PartTableColumn::kTransport:
         flags &= ~Qt::ItemIsEditable;
         break;
     default:

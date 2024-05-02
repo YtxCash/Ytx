@@ -7,6 +7,7 @@
 #include <QSqlDatabase>
 
 #include "component/enumclass.h"
+#include "component/info.h"
 #include "component/using.h"
 
 class TableSql : public QObject {
@@ -33,7 +34,7 @@ public slots:
 
 public:
     explicit TableSql(QObject* parent = nullptr);
-    void SetData(CString& trans, Section section);
+    void SetInfo(const Info* info);
 
     SPTransList TransList(int node_id);
     bool Insert(CSPTrans& trans);
@@ -43,12 +44,16 @@ public:
     bool Update(CString& column, const QVariant& value, Check state);
 
     SPTransList TransList(int node_id, const QList<int>& trans_id_list);
-    SPTrans Trans();
+    SPTransaction Transaction(int trans_id);
+
+    SPTrans AllocateTrans();
 
     inline SPTransactionHash* TransactionHash() { return &transaction_hash_; }
 
 private:
     SPTransList QueryList(int node_id, QSqlQuery& query);
+    SPTransaction QueryTransaction(int trans_id, QSqlQuery& query);
+
     void Convert(CSPTransaction& transaction, SPTrans& trans, bool left);
 
     QMultiHash<int, int> RelatedNodeAndTrans(int node_id) const;
@@ -57,8 +62,7 @@ private:
     QSqlDatabase* db_ {};
     SPTransactionHash transaction_hash_ {};
     SPTransaction last_insert_transaction_ {};
-    QString trans_ {}; // SQL database node transaction table name
-    Section section_ {};
+    const Info* info_ {};
 };
 
 #endif // TABLESQL_H

@@ -1,13 +1,16 @@
-#ifndef NODENAME_H
-#define NODENAME_H
+#ifndef TNODEIDR_H
+#define TNODEIDR_H
+
+// read only
 
 #include <QStyledItemDelegate>
 
+#include "component/enumclass.h"
 #include "component/using.h"
 
-class NodeName : public QStyledItemDelegate {
+class TNodeIDR : public QStyledItemDelegate {
 public:
-    NodeName(CStringHash* leaf_path, CStringHash* branch_path, QObject* parent = nullptr);
+    TNodeIDR(CSPCTrans trans, const QHash<Section, CStringHash*>* leaf_path_hash, QObject* parent = nullptr);
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     QSize sizeHint(const QStyleOptionViewItem& option, const QModelIndex& index) const override;
 
@@ -15,8 +18,8 @@ private:
     QString GetPath(const QModelIndex& index) const;
 
 private:
-    CStringHash* leaf_path_ {};
-    CStringHash* branch_path_ {};
+    CSPCTrans trans_ {};
+    const QHash<Section, CStringHash*>* leaf_path_hash_ {};
 };
 
-#endif // NODENAME_H
+#endif // TNODEIDR_H

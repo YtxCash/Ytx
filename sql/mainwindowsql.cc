@@ -22,7 +22,7 @@ void MainwindowSql::QuerySectionRule(SectionRule& section_rule, Section section)
                 "WHERE id = :section " };
 
     query.prepare(part);
-    query.bindValue(":section", static_cast<int>(section) + 1);
+    query.bindValue(":section", std::to_underlying(section) + 1);
     if (!query.exec()) {
         qWarning() << "Failed to query section rule: " << query.lastError().text();
         return;
@@ -56,7 +56,7 @@ void MainwindowSql::UpdateSectionRule(const SectionRule& section_rule, Section s
     QSqlQuery query(*db_);
 
     query.prepare(part);
-    query.bindValue(":section", static_cast<int>(section) + 1);
+    query.bindValue(":section", std::to_underlying(section) + 1);
     query.bindValue(":static_label", section_rule.static_label);
     query.bindValue(":static_node", section_rule.static_node);
     query.bindValue(":dynamic_label", section_rule.dynamic_label);
@@ -148,15 +148,18 @@ void MainwindowSql::NewFile(CString& file_path)
 
 QString MainwindowSql::Node(CString& table_name)
 {
-    return QString("CREATE TABLE IF NOT EXISTS %1 ( \n"
+    return QString("CREATE TABLE IF NOT EXISTS %1 (           \n"
                    "    id INTEGER PRIMARY KEY AUTOINCREMENT, \n"
-                   "    name           TEXT, \n"
-                   "    code           TEXT, \n"
-                   "    description    TEXT, \n"
-                   "    note           TEXT, \n"
+                   "    name           TEXT,                  \n"
+                   "    code           TEXT,                  \n"
+                   "    ratio          NUMERIC,               \n"
+                   "    extension      INTEGER,               \n"
+                   "    deadline       DATE,                  \n"
+                   "    description    TEXT,                  \n"
+                   "    note           TEXT,                  \n"
                    "    node_rule      BOOLEAN    DEFAULT 0,  \n"
                    "    branch         BOOLEAN    DEFAULT 0,  \n"
-                   "    unit           INTEGER, \n"
+                   "    unit           INTEGER,               \n"
                    "    removed        BOOLEAN    DEFAULT 0   \n"
                    ");")
         .arg(table_name);
@@ -164,7 +167,7 @@ QString MainwindowSql::Node(CString& table_name)
 
 QString MainwindowSql::Path(CString& table_name)
 {
-    return QString("CREATE TABLE IF NOT EXISTS %1 ( \n"
+    return QString("CREATE TABLE IF NOT EXISTS %1 (                     \n"
                    "    ancestor      INTEGER  CHECK (ancestor   >= 1), \n"
                    "    descendant    INTEGER  CHECK (descendant >= 1), \n"
                    "    distance      INTEGER  CHECK (distance   >= 0)  \n"
@@ -174,22 +177,24 @@ QString MainwindowSql::Path(CString& table_name)
 
 QString MainwindowSql::Transaction(CString& table_name)
 {
-    return QString("CREATE TABLE IF NOT EXISTS %1 ( \n"
-                   "    id INTEGER PRIMARY KEY AUTOINCREMENT, \n"
-                   "    date_time      DATE,    \n"
-                   "    code           TEXT,    \n"
-                   "    lhs_node       INTEGER, \n"
-                   "    lhs_ratio      REAL       DEFAULT 1.0  CHECK (lhs_ratio  > 0), \n"
-                   "    lhs_debit      NUMERIC                 CHECK (lhs_debit  >=0), \n"
-                   "    lhs_credit     NUMERIC                 CHECK (lhs_credit >=0), \n"
-                   "    description    TEXT,    \n"
-                   "    rhs_node       INTEGER, \n"
-                   "    rhs_ratio      REAL       DEFAULT 1.0  CHECK (rhs_ratio  > 0), \n"
-                   "    rhs_debit      NUMERIC                 CHECK (rhs_debit  >=0), \n"
-                   "    rhs_credit     NUMERIC                 CHECK (rhs_credit >=0), \n"
-                   "    state          BOOLEAN    DEFAULT 0,  \n"
-                   "    document       TEXT,    \n"
-                   "    removed        BOOLEAN    DEFAULT 0   \n"
+    return QString("CREATE TABLE IF NOT EXISTS %1 (                                                      \n"
+                   "    id INTEGER PRIMARY KEY AUTOINCREMENT,                                            \n"
+                   "    sender_receiver    INTEGER                 CHECK(sender_receiver IN (-1, 0, 1)), \n"
+                   "    section_marker     TEXT,                                                         \n"
+                   "    date_time          DATE,                                                         \n"
+                   "    code               TEXT,                                                         \n"
+                   "    lhs_node           INTEGER,                                                      \n"
+                   "    lhs_ratio          NUMERIC    DEFAULT 1.0  CHECK (lhs_ratio  > 0),               \n"
+                   "    lhs_debit          NUMERIC                 CHECK (lhs_debit  >=0),               \n"
+                   "    lhs_credit         NUMERIC                 CHECK (lhs_credit >=0),               \n"
+                   "    description        TEXT,                                                         \n"
+                   "    rhs_node           INTEGER,                                                      \n"
+                   "    rhs_ratio          NUMERIC    DEFAULT 1.0  CHECK (rhs_ratio  > 0),               \n"
+                   "    rhs_debit          NUMERIC                 CHECK (rhs_debit  >=0),               \n"
+                   "    rhs_credit         NUMERIC                 CHECK (rhs_credit >=0),               \n"
+                   "    state              BOOLEAN    DEFAULT 0,                                         \n"
+                   "    document           TEXT,                                                         \n"
+                   "    removed            BOOLEAN    DEFAULT 0                                          \n"
                    ");")
         .arg(table_name);
 }

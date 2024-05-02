@@ -1,8 +1,8 @@
-#include "searchnodemodel.h"
+#include "searchtreemodel.h"
 
 #include "component/enumclass.h"
 
-SearchNodeModel::SearchNodeModel(const TreeInfo* info, const TreeModel* tree_model, const SectionRule* section_rule, SearchSql* sql, QObject* parent)
+SearchTreeModel::SearchTreeModel(const Info* info, const TreeModel* tree_model, const SectionRule* section_rule, SearchSql* sql, QObject* parent)
     : QAbstractItemModel { parent }
     , sql_ { sql }
     , info_ { info }
@@ -11,7 +11,7 @@ SearchNodeModel::SearchNodeModel(const TreeInfo* info, const TreeModel* tree_mod
 {
 }
 
-QModelIndex SearchNodeModel::index(int row, int column, const QModelIndex& parent) const
+QModelIndex SearchTreeModel::index(int row, int column, const QModelIndex& parent) const
 {
     if (!hasIndex(row, column, parent))
         return QModelIndex();
@@ -19,88 +19,92 @@ QModelIndex SearchNodeModel::index(int row, int column, const QModelIndex& paren
     return createIndex(row, column);
 }
 
-QModelIndex SearchNodeModel::parent(const QModelIndex& index) const
+QModelIndex SearchTreeModel::parent(const QModelIndex& index) const
 {
     Q_UNUSED(index);
     return QModelIndex();
 }
 
-int SearchNodeModel::rowCount(const QModelIndex& parent) const
+int SearchTreeModel::rowCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
     return node_list_.size();
 }
 
-int SearchNodeModel::columnCount(const QModelIndex& parent) const
+int SearchTreeModel::columnCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return info_->header.size();
+    return info_->tree_header.size();
 }
 
-QVariant SearchNodeModel::data(const QModelIndex& index, int role) const
+QVariant SearchTreeModel::data(const QModelIndex& index, int role) const
 {
     if (!index.isValid() || role != Qt::DisplayRole)
         return QVariant();
 
     auto node { node_list_.at(index.row()) };
-    const NodeColumn kColumn { index.column() };
+    const TreeColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case NodeColumn::kName:
+    case TreeColumn::kName:
         return node->name;
-    case NodeColumn::kID:
+    case TreeColumn::kID:
         return node->id;
-    case NodeColumn::kCode:
+    case TreeColumn::kCode:
         return node->code;
-    case NodeColumn::kDescription:
+    case TreeColumn::kRatio:
+        return node->ratio;
+    case TreeColumn::kDescription:
         return node->description;
-    case NodeColumn::kNote:
+    case TreeColumn::kNote:
         return node->note;
-    case NodeColumn::kNodeRule:
+    case TreeColumn::kNodeRule:
         return node->node_rule;
-    case NodeColumn::kBranch:
+    case TreeColumn::kBranch:
         return node->branch;
-    case NodeColumn::kUnit:
+    case TreeColumn::kUnit:
         return node->unit;
-    case NodeColumn::kTotal:
+    case TreeColumn::kTotal:
         return node->unit == section_rule_->base_unit ? node->base_total : node->foreign_total;
     default:
         return QVariant();
     }
 }
 
-QVariant SearchNodeModel::headerData(int section, Qt::Orientation orientation, int role) const
+QVariant SearchTreeModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-        return info_->header.at(section);
+        return info_->tree_header.at(section);
 
     return QVariant();
 }
 
-void SearchNodeModel::sort(int column, Qt::SortOrder order)
+void SearchTreeModel::sort(int column, Qt::SortOrder order)
 {
-    if (column <= -1 || column >= info_->header.size())
+    if (column <= -1 || column >= info_->tree_header.size())
         return;
 
     auto Compare = [column, order](const Node* lhs, const Node* rhs) -> bool {
-        const NodeColumn kColumn { column };
+        const TreeColumn kColumn { column };
 
         switch (kColumn) {
-        case NodeColumn::kName:
+        case TreeColumn::kName:
             return (order == Qt::AscendingOrder) ? (lhs->name < rhs->name) : (lhs->name > rhs->name);
-        case NodeColumn::kCode:
+        case TreeColumn::kCode:
             return (order == Qt::AscendingOrder) ? (lhs->code < rhs->code) : (lhs->code > rhs->code);
-        case NodeColumn::kDescription:
+        case TreeColumn::kRatio:
+            return (order == Qt::AscendingOrder) ? (lhs->ratio < rhs->ratio) : (lhs->ratio > rhs->ratio);
+        case TreeColumn::kDescription:
             return (order == Qt::AscendingOrder) ? (lhs->description < rhs->description) : (lhs->description > rhs->description);
-        case NodeColumn::kNote:
+        case TreeColumn::kNote:
             return (order == Qt::AscendingOrder) ? (lhs->note < rhs->note) : (lhs->note > rhs->note);
-        case NodeColumn::kNodeRule:
+        case TreeColumn::kNodeRule:
             return (order == Qt::AscendingOrder) ? (lhs->node_rule < rhs->node_rule) : (lhs->node_rule > rhs->node_rule);
-        case NodeColumn::kBranch:
+        case TreeColumn::kBranch:
             return (order == Qt::AscendingOrder) ? (lhs->branch < rhs->branch) : (lhs->branch > rhs->branch);
-        case NodeColumn::kUnit:
+        case TreeColumn::kUnit:
             return (order == Qt::AscendingOrder) ? (lhs->unit < rhs->unit) : (lhs->unit > rhs->unit);
-        case NodeColumn::kTotal:
+        case TreeColumn::kTotal:
             return (order == Qt::AscendingOrder) ? (lhs->base_total < rhs->base_total) : (lhs->base_total > rhs->base_total);
         default:
             return false;
@@ -112,7 +116,7 @@ void SearchNodeModel::sort(int column, Qt::SortOrder order)
     emit layoutChanged();
 }
 
-void SearchNodeModel::Query(const QString& text)
+void SearchTreeModel::Query(const QString& text)
 {
     node_list_.clear();
 

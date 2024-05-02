@@ -1,19 +1,19 @@
-﻿#ifndef TREEMODEL_H
+#ifndef TREEMODEL_H
 #define TREEMODEL_H
 
 #include <QAbstractItemModel>
 
+#include "component/info.h"
 #include "component/settings.h"
 #include "component/using.h"
 #include "sql/treesql.h"
-#include "treeinfo.h"
 
 class TreeModel : public QAbstractItemModel {
     Q_OBJECT
 
 public:
-    TreeModel(const TreeInfo* info, TreeSql* sql, const SectionRule* section_rule, const ViewHash* sectioon_view, const Interface* interface,
-        QObject* parent = nullptr);
+    TreeModel(
+        const Info* info, TreeSql* sql, const SectionRule* section_rule, const ViewHash* sectioon_view, const Interface* interface, QObject* parent = nullptr);
     ~TreeModel();
 
 signals:
@@ -92,6 +92,9 @@ private:
     bool UpdateNote(Node* node, CString& value);
     bool UpdateUnit(Node* node, int value);
     bool UpdateName(Node* node, CString& value);
+    bool UpdateRatio(Node* node, double value);
+    bool UpdateExtension(Node* node, int value);
+    bool UpdateDeadline(Node* node, CString& value);
 
     void UpdatePath(const Node* node);
     void UpdateLeafUnit(const Node* node, int unit, int value);
@@ -99,13 +102,13 @@ private:
     bool IsDescendant(Node* lhs, Node* rhs) const;
 
     QString CreatePath(const Node* node) const;
-    void SortIterative(Node* node, const auto& Compare);
+    void SortIterative(Node* node, std::function<bool(const Node*, const Node*)> Compare);
     void RecycleNode(NodeHash& node_hash);
 
 private:
     Node* root_ {};
 
-    const TreeInfo* info_ {};
+    const Info* info_ {};
     const SectionRule* section_rule_ {};
     const ViewHash* section_view_ {};
     const Interface* interface_ {};

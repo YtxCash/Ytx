@@ -2,41 +2,46 @@
 
 #include <QHeaderView>
 
+#include "component/constvalue.h"
 #include "component/enumclass.h"
-#include "delegate/search/nodename.h"
+#include "delegate/datetimer.h"
+#include "delegate/search/snodeidr.h"
 #include "delegate/state.h"
-#include "delegate/table/document.h"
-#include "delegate/table/nodeid.h"
+#include "delegate/table/tabledbclick.h"
+#include "delegate/table/tablenodeid.h"
 #include "delegate/table/tablevalue.h"
-#include "delegate/tree/combohash.h"
-#include "delegate/tree/treevalue.h"
+#include "delegate/tree/treecombo.h"
+#include "delegate/tree/treevaluer.h"
 #include "ui_search.h"
 
-Search::Search(const TreeInfo* tree_info, const TreeModel* tree_model, const TableInfo* table_info, SearchSql* sql, const SectionRule* section_rule,
-    CStringHash* unit_hash, CStringHash* node_rule_hash, CStringHash* unit_symbol_hash, QWidget* parent)
+Search::Search(const Info* info, const Interface* interface, const TreeModel* tree_model, SearchSql* sql, const SectionRule* section_rule,
+    const CStringHash* node_rule, QWidget* parent)
     : QDialog(parent)
     , ui(new Ui::Search)
     , sql_ { sql }
-    , unit_hash_ { unit_hash }
-    , node_rule_hash_ { node_rule_hash }
+    , node_rule_ { node_rule }
     , section_rule_ { section_rule }
     , tree_model_ { tree_model }
-    , tree_info_ { tree_info }
-    , unit_symbol_hash_ { unit_symbol_hash }
+    , info_ { info }
+    , interface_ { interface }
 {
     ui->setupUi(this);
 
     IniDialog();
 
-    node_model_ = new SearchNodeModel(tree_info_, tree_model_, section_rule_, sql, this);
-    trans_model_ = new SearchTransModel(table_info, sql, this);
+    search_tree_model_ = new SearchTreeModel(info_, tree_model_, section_rule_, sql, this);
+    search_table_model_ = new SearchTableModel(info, sql, this);
 
-    IniNode(ui->nodeView, node_model_);
-    IniTrans(ui->transView, trans_model_);
+    IniTree(ui->treeView, search_tree_model_);
+    IniTable(ui->tableView, search_table_model_);
     IniConnect();
 
-    IniView(ui->nodeView);
-    IniView(ui->transView);
+    IniView(ui->treeView);
+    HideColumn(ui->treeView, info->section);
+    IniView(ui->tableView);
+
+    ResizeTreeColumn(ui->treeView->horizontalHeader());
+    ResizeTableColumn(ui->tableView->horizontalHeader());
 }
 
 Search::~Search() { delete ui; }
@@ -59,93 +64,64 @@ void Search::IniConnect()
 {
     connect(ui->pBtnCancel, &QPushButton::clicked, this, &Search::close, Qt::UniqueConnection);
     connect(ui->lineEdit, &QLineEdit::returnPressed, this, &Search::RSearch, Qt::UniqueConnection);
-    connect(ui->nodeView, &QTableView::doubleClicked, this, &Search::RDoubleClicked, Qt::UniqueConnection);
-    connect(ui->transView, &QTableView::doubleClicked, this, &Search::RDoubleClicked, Qt::UniqueConnection);
+    connect(ui->treeView, &QTableView::doubleClicked, this, &Search::RDoubleClicked, Qt::UniqueConnection);
+    connect(ui->tableView, &QTableView::doubleClicked, this, &Search::RDoubleClicked, Qt::UniqueConnection);
 }
 
-void Search::IniNode(QTableView* view, SearchNodeModel* model)
+void Search::IniTree(QTableView* view, SearchTreeModel* model)
 {
     view->setModel(model);
 
-    auto unit { new ComboHash(unit_hash_, view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kUnit), unit);
+    auto unit { new TreeCombo(&info_->unit_hash, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kUnit), unit);
 
-    auto node_rule { new ComboHash(node_rule_hash_, view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kNodeRule), node_rule);
+    auto node_rule { new TreeCombo(node_rule_, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kNodeRule), node_rule);
 
-    auto total { new TreeValue(&section_rule_->value_decimal, unit_symbol_hash_, view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kTotal), total);
+    auto total { new TreeValueR(&section_rule_->value_decimal, &info_->unit_symbol_hash, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kTotal), total);
 
     auto branch { new State(view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kBranch), branch);
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kBranch), branch);
 
     auto leaf_path { tree_model_->LeafPath() };
     auto branch_path { tree_model_->BranchPath() };
-    auto name { new NodeName(leaf_path, branch_path, view) };
-    view->setItemDelegateForColumn(static_cast<int>(NodeColumn::kName), name);
+    auto name { new SNodeIDR(leaf_path, branch_path, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TreeColumn::kName), name);
 
-    view->setColumnHidden(static_cast<int>(NodeColumn::kID), true);
-    view->setColumnHidden(static_cast<int>(NodeColumn::kPlaceholder), true);
-
-    auto h_header { view->horizontalHeader() };
-    auto count { model->columnCount() };
-
-    for (int column = 0; column != count; ++column) {
-        NodeColumn x { column };
-
-        switch (x) {
-        case NodeColumn::kDescription:
-            h_header->setSectionResizeMode(column, QHeaderView::Stretch);
-            break;
-        default:
-            h_header->setSectionResizeMode(column, QHeaderView::ResizeToContents);
-            break;
-        }
-    }
+    view->setColumnHidden(std::to_underlying(TreeColumn::kID), true);
+    view->setColumnHidden(std::to_underlying(TreeColumn::kPlaceholder), true);
 }
 
-void Search::IniTrans(QTableView* view, SearchTransModel* model)
+void Search::IniTable(QTableView* view, SearchTableModel* model)
 {
     view->setModel(model);
 
-    auto value { new TableValue(&section_rule_->value_decimal, view) };
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kLhsDebit), value);
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kRhsDebit), value);
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kLhsCredit), value);
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kRhsCredit), value);
+    auto value { new TableValue(&section_rule_->value_decimal, DMIN, DMAX, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kLhsDebit), value);
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kRhsDebit), value);
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kLhsCredit), value);
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kRhsCredit), value);
 
-    auto ratio_decimal { new TableValue(&section_rule_->ratio_decimal, view) };
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kLhsRatio), ratio_decimal);
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kRhsRatio), ratio_decimal);
+    auto ratio { new TableValue(&section_rule_->ratio_decimal, DMIN, DMAX, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kLhsRatio), ratio);
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kRhsRatio), ratio);
 
     auto leaf_path { tree_model_->LeafPath() };
-    auto node_name { new NodeID(leaf_path, 0, view) };
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kRhsNode), node_name);
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kLhsNode), node_name);
+    auto node_name { new TableNodeID(leaf_path, 0, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kRhsNode), node_name);
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kLhsNode), node_name);
 
     auto state { new State(view) };
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kState), state);
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kState), state);
 
-    auto document { new Document(view) };
-    view->setItemDelegateForColumn(static_cast<int>(SearchTransactionColumn::kDocument), document);
+    auto document { new TableDbClick(view) };
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kDocument), document);
 
-    view->setColumnHidden(static_cast<int>(SearchTransactionColumn::kID), true);
+    auto date_time { new DateTimeR(&interface_->date_format, &section_rule_->hide_time, view) };
+    view->setItemDelegateForColumn(std::to_underlying(TableColumn::kDateTime), date_time);
 
-    auto h_header { view->horizontalHeader() };
-    auto count { model->columnCount() };
-
-    for (int column = 0; column != count; ++column) {
-        SearchTransactionColumn x { column };
-
-        switch (x) {
-        case SearchTransactionColumn::kDescription:
-            h_header->setSectionResizeMode(column, QHeaderView::Stretch);
-            break;
-        default:
-            h_header->setSectionResizeMode(column, QHeaderView::ResizeToContents);
-            break;
-        }
-    }
+    view->setColumnHidden(std::to_underlying(TableColumn::kID), true);
 }
 
 void Search::IniView(QTableView* view)
@@ -158,33 +134,68 @@ void Search::IniView(QTableView* view)
     view->verticalHeader()->setHidden(true);
 }
 
+void Search::HideColumn(QTableView* view, Section section)
+{
+    switch (section) {
+    case Section::kFinance:
+        view->setColumnHidden(std::to_underlying(TreeColumn::kRatio), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kExtension), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kDeadline), true);
+        break;
+    case Section::kTask:
+    case Section::kProduct:
+        view->setColumnHidden(std::to_underlying(TreeColumn::kExtension), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kDeadline), true);
+        break;
+    case Section::kNetwork:
+        view->setColumnHidden(std::to_underlying(TreeColumn::kTotal), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kNodeRule), true);
+        view->setColumnHidden(std::to_underlying(TreeColumn::kUnit), true);
+        break;
+    default:
+        break;
+    }
+}
+
+void Search::ResizeTreeColumn(QHeaderView* header)
+{
+    header->setSectionResizeMode(QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(std::to_underlying(TreeColumn::kDescription), QHeaderView::Stretch);
+}
+
+void Search::ResizeTableColumn(QHeaderView* header)
+{
+    header->setSectionResizeMode(QHeaderView::ResizeToContents);
+    header->setSectionResizeMode(std::to_underlying(TableColumn::kDescription), QHeaderView::Stretch);
+}
+
 void Search::RSearch()
 {
     CString kText { ui->lineEdit->text() };
 
     if (ui->rBtnNode->isChecked()) {
-        node_model_->Query(kText);
-        ui->nodeView->resizeColumnsToContents();
+        search_tree_model_->Query(kText);
+        ResizeTreeColumn(ui->treeView->horizontalHeader());
     }
 
     if (ui->rBtnTransaction->isChecked()) {
-        trans_model_->Query(kText);
-        ui->transView->resizeColumnsToContents();
+        search_table_model_->Query(kText);
+        ResizeTableColumn(ui->tableView->horizontalHeader());
     }
 }
 
 void Search::RDoubleClicked(const QModelIndex& index)
 {
     if (ui->rBtnNode->isChecked()) {
-        int node_id { index.sibling(index.row(), static_cast<int>(NodeColumn::kID)).data().toInt() };
-        emit SSearchedNode(node_id);
+        int node_id { index.sibling(index.row(), std::to_underlying(TreeColumn::kID)).data().toInt() };
+        emit STreeLocation(node_id);
     }
 
     if (ui->rBtnTransaction->isChecked()) {
-        int lhs_node_id { index.sibling(index.row(), static_cast<int>(SearchTransactionColumn::kLhsNode)).data().toInt() };
-        int rhs_node_id { index.sibling(index.row(), static_cast<int>(SearchTransactionColumn::kRhsNode)).data().toInt() };
-        int trans_id { index.sibling(index.row(), static_cast<int>(SearchTransactionColumn::kID)).data().toInt() };
-        emit SSearchedTrans(trans_id, lhs_node_id, rhs_node_id);
+        int lhs_node_id { index.sibling(index.row(), std::to_underlying(TableColumn::kLhsNode)).data().toInt() };
+        int rhs_node_id { index.sibling(index.row(), std::to_underlying(TableColumn::kRhsNode)).data().toInt() };
+        int trans_id { index.sibling(index.row(), std::to_underlying(TableColumn::kID)).data().toInt() };
+        emit STableLocation(trans_id, lhs_node_id, rhs_node_id);
     }
 }
 

@@ -1,8 +1,9 @@
 #include "editnode.h"
 
+#include "component/constvalue.h"
 #include "ui_editnode.h"
 
-EditNode::EditNode(Node* node, CString* separator, CStringHash* unit_hash, bool node_usage, bool view_opened, CString& parent_path, QWidget* parent)
+EditNode::EditNode(Node* node, CString* separator, const Info* info, bool node_usage, bool view_opened, CString& parent_path, QWidget* parent)
     : QDialog(parent)
     , ui(new Ui::EditNode)
     , node_ { node }
@@ -12,9 +13,10 @@ EditNode::EditNode(Node* node, CString* separator, CStringHash* unit_hash, bool 
     , parent_path_ { parent_path }
 {
     ui->setupUi(this);
-    IniDialog(unit_hash);
+    IniDialog(&info->unit_hash);
     Data(node);
     IniConnect();
+    CustomWidget(info->section);
 }
 
 EditNode::~EditNode() { delete ui; }
@@ -44,6 +46,14 @@ void EditNode::IniDialog(CStringHash* unit_hash)
 
     ui->comboUnit->model()->sort(0);
     ui->lineEditName->setValidator(new QRegularExpressionValidator(QRegularExpression("[\\p{L} ()（）\\d]*"), this));
+
+    ui->spinBoxExtension->setRange(IMIN, IMAX);
+    ui->dateEditDeadline->setDisplayFormat(DATE_FST);
+    ui->doubleSpinBoxRatio->setRange(DMIN, DMAX);
+
+    ui->spinBoxExtension->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    ui->doubleSpinBoxRatio->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    ui->dateEditDeadline->setButtonSymbols(QAbstractSpinBox::NoButtons);
 }
 
 void EditNode::IniConnect()
@@ -92,6 +102,41 @@ void EditNode::SetData()
         node_->foreign_total = -node_->foreign_total;
     }
     node_->node_rule = node_rule;
+}
+
+void EditNode::CustomWidget(Section section)
+{
+    switch (section) {
+    case Section::kFinance:
+        ui->labelDeadline->hide();
+        ui->labelRatio->hide();
+        ui->labelExtension->hide();
+        ui->spinBoxExtension->hide();
+        ui->doubleSpinBoxRatio->hide();
+        ui->dateEditDeadline->hide();
+        ui->labName->setText(tr("Account"));
+        break;
+    case Section::kTask:
+        ui->labelRatio->hide();
+        ui->doubleSpinBoxRatio->hide();
+    case Section::kProduct:
+        ui->labelDeadline->hide();
+        ui->labelExtension->hide();
+        ui->spinBoxExtension->hide();
+        ui->dateEditDeadline->hide();
+        ui->labelRatio->setText(tr("UnitPrice"));
+        break;
+    case Section::kNetwork:
+        ui->labelExtension->setText(tr("PaymentTerm"));
+        ui->labelRatio->setText(tr("TaxRate"));
+        ui->labUnit->hide();
+        ui->labProperty->hide();
+        ui->groupBox->hide();
+        ui->comboUnit->hide();
+        break;
+    default:
+        break;
+    }
 }
 
 void EditNode::RCustomAccept()

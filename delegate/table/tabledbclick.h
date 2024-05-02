@@ -1,18 +1,18 @@
-#ifndef DOCUMENT_H
-#define DOCUMENT_H
+#ifndef TABLEDBCLICK_H
+#define TABLEDBCLICK_H
 
 #include <QStyledItemDelegate>
 
-class Document : public QStyledItemDelegate {
+class TableDbClick : public QStyledItemDelegate {
     Q_OBJECT
 
 public:
-    explicit Document(QObject* parent = nullptr);
+    explicit TableDbClick(QObject* parent = nullptr);
     void paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const override;
     bool editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option, const QModelIndex& index) override;
 
 signals:
-    void SUpdateDocument();
+    void SEdit();
 };
 
-#endif // DOCUMENT_H
+#endif // TABLEDBCLICK_H

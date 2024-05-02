@@ -1,23 +1,23 @@
-#include "document.h"
+#include "tabledbclick.h"
 
 #include <QMouseEvent>
 
-Document::Document(QObject* parent)
+TableDbClick::TableDbClick(QObject* parent)
     : QStyledItemDelegate { parent }
 {
 }
 
-void Document::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
+void TableDbClick::paint(QPainter* painter, const QStyleOptionViewItem& option, const QModelIndex& index) const
 {
     auto opt { option };
     opt.displayAlignment = Qt::AlignCenter;
     QStyledItemDelegate::paint(painter, opt, index);
 }
 
-bool Document::editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option, const QModelIndex& index)
+bool TableDbClick::editorEvent(QEvent* event, QAbstractItemModel* model, const QStyleOptionViewItem& option, const QModelIndex& index)
 {
     if (event->type() == QEvent::MouseButtonDblClick && option.rect.contains(static_cast<QMouseEvent*>(event)->pos()))
-        emit SUpdateDocument();
+        emit SEdit();
 
     return QStyledItemDelegate::editorEvent(event, model, option, index);
 }

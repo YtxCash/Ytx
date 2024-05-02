@@ -1,25 +1,19 @@
-#ifndef SEARCHNODEMODEL_H
-#define SEARCHNODEMODEL_H
+#ifndef SEARCHTREEMODEL_H
+#define SEARCHTREEMODEL_H
 
 #include <QAbstractItemModel>
 
+#include "component/info.h"
 #include "component/settings.h"
 #include "component/using.h"
 #include "sql/searchsql.h"
-#include "tree/treeinfo.h"
 #include "tree/treemodel.h"
 
-class SearchNodeModel : public QAbstractItemModel {
+class SearchTreeModel : public QAbstractItemModel {
     Q_OBJECT
 public:
-    SearchNodeModel(const TreeInfo* info, const TreeModel* tree_model, const SectionRule* section_rule, SearchSql* sql, QObject* parent = nullptr);
-    ~SearchNodeModel() = default;
-
-    SearchNodeModel() = delete;
-    SearchNodeModel(const SearchNodeModel&) = delete;
-    SearchNodeModel(SearchNodeModel&&) = delete;
-    SearchNodeModel& operator=(const SearchNodeModel&) = delete;
-    SearchNodeModel& operator=(SearchNodeModel&&) = delete;
+    SearchTreeModel(const Info* info, const TreeModel* tree_model, const SectionRule* section_rule, SearchSql* sql, QObject* parent = nullptr);
+    ~SearchTreeModel() = default;
 
 public:
     QModelIndex index(int row, int column, const QModelIndex& parent = QModelIndex()) const override;
@@ -39,11 +33,11 @@ public:
 private:
     SearchSql* sql_ {};
 
-    const TreeInfo* info_ {};
+    const Info* info_ {};
     const SectionRule* section_rule_ {};
     const TreeModel* tree_model_ {};
 
     QList<const Node*> node_list_ {};
 };
 
-#endif // SEARCHNODEMODEL_H
+#endif // SEARCHTREEMODEL_H

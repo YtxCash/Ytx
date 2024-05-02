@@ -5,9 +5,11 @@
 #include "component/enumclass.h"
 #include "widget/doublespinbox.h"
 
-TableValue::TableValue(const int* decimal, QObject* parent)
+TableValue::TableValue(const int* decimal, double min, double max, QObject* parent)
     : QStyledItemDelegate { parent }
     , decimal_ { decimal }
+    , max_ { max }
+    , min_ { min }
     , locale_ { QLocale::English, QLocale::UnitedStates }
 {
 }
@@ -19,7 +21,7 @@ QWidget* TableValue::createEditor(QWidget* parent, const QStyleOptionViewItem& o
 
     auto editor { new DoubleSpinBox(parent) };
     editor->setDecimals(*decimal_);
-
+    editor->setRange(min_, max_);
     return editor;
 }
 
@@ -42,10 +44,16 @@ void TableValue::paint(QPainter* painter, const QStyleOptionViewItem& option, co
 {
     auto value { index.data().toDouble() };
 
-    if (value == 0 && index.column() != static_cast<int>(TransColumn::kRemainder))
+    if (value == 0 && index.column() != std::to_underlying(PartTableColumn::kRemainder))
         return QStyledItemDelegate::paint(painter, option, index);
 
-    painter->setPen(option.state & QStyle::State_Selected ? option.palette.color(QPalette::HighlightedText) : option.palette.color(QPalette::Text));
+    auto selected { option.state & QStyle::State_Selected };
+    auto palette { option.palette };
+
+    painter->setPen(selected ? palette.color(QPalette::HighlightedText) : palette.color(QPalette::Text));
+    if (selected && index.column() == std::to_underlying(TreeColumn::kRatio))
+        painter->fillRect(option.rect, palette.highlight());
+
     painter->drawText(option.rect.adjusted(0, 0, -4, 0), Qt::AlignRight | Qt::AlignVCenter, locale_.toString(value, 'f', *decimal_));
 }
 

@@ -29,4 +29,6 @@ using CSPCTrans = const QSharedPointer<const Trans>;
 using CString = const QString;
 using CStringList = const QStringList;
 
+using PDialog = QPointer<QDialog>;
+
 #endif // USING_H

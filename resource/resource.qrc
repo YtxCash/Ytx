@@ -51,5 +51,8 @@
         <file>solarized_dark/check-all.png</file>
         <file>solarized_dark/check-reverse.png</file>
         <file>solarized_dark/check-none.png</file>
+        <file>solarized_dark/locate.png</file>
+        <file>solarized_dark/edit2.png</file>
+        <file>solarized_dark/remove2.png</file>
     </qresource>
 </RCC>

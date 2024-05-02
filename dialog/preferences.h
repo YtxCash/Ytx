@@ -4,6 +4,8 @@
 #include <QComboBox>
 #include <QDialog>
 
+#include "component/enumclass.h"
+#include "component/info.h"
 #include "component/settings.h"
 #include "component/using.h"
 
@@ -15,7 +17,7 @@ class Preferences : public QDialog {
     Q_OBJECT
 
 public:
-    Preferences(CStringHash* currency_hash, CStringHash* leaf_path, CStringHash* branch_path, CStringList* date_format_list, const Interface& interface,
+    Preferences(const Info* info, CStringHash* leaf_path, CStringHash* branch_path, CStringList* date_format_list, const Interface& interface,
         const SectionRule& section_rule, QWidget* parent = nullptr);
     ~Preferences();
 
@@ -70,6 +72,8 @@ private:
     void SetCombo(QComboBox* combo, CStringList& list, CString& string);
     void SetIndex(QComboBox* combo, const QVariant& value);
     void SetLine(QLineEdit* line, CString& text);
+
+    void RenameLable(Section section);
 
 private:
     Ui::Preferences* ui;

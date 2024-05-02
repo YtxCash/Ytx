@@ -6,7 +6,7 @@ DateTimeEdit::DateTimeEdit(QWidget* parent)
     : QDateTimeEdit { parent }
 {
     this->setButtonSymbols(QAbstractSpinBox::NoButtons);
-    this->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    this->setAlignment(Qt::AlignCenter);
 }
 
 void DateTimeEdit::keyPressEvent(QKeyEvent* event)

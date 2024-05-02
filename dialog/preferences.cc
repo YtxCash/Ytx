@@ -7,7 +7,7 @@
 #include "component/constvalue.h"
 #include "ui_preferences.h"
 
-Preferences::Preferences(CStringHash* unit_hash, CStringHash* leaf_path, CStringHash* branch_path, CStringList* date_format_list, const Interface& interface,
+Preferences::Preferences(const Info* info, CStringHash* leaf_path, CStringHash* branch_path, CStringList* date_format_list, const Interface& interface,
     const SectionRule& section_rule, QWidget* parent)
     : QDialog(parent)
     , ui(new Ui::Preferences)
@@ -22,7 +22,8 @@ Preferences::Preferences(CStringHash* unit_hash, CStringHash* leaf_path, CString
     IniConnect();
     IniStringList();
 
-    SetData(unit_hash, date_format_list);
+    SetData(&info->unit_hash, date_format_list);
+    RenameLable(info->section);
 }
 
 Preferences::~Preferences() { delete ui; }
@@ -48,6 +49,9 @@ void Preferences::IniDialog()
     IniCombo(ui->comboStatic);
     IniCombo(ui->comboOperation);
     IniCombo(ui->comboDynamicRhs);
+
+    ui->spinRatioDecimal->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    ui->spinValueDecimal->setButtonSymbols(QAbstractSpinBox::NoButtons);
 }
 
 void Preferences::IniCombo(QComboBox* combo)
@@ -206,6 +210,28 @@ void Preferences::on_lineDynamic_textChanged(const QString& arg1)
 }
 
 void Preferences::SetLine(QLineEdit* line, CString& text) { line->setMinimumWidth(QFontMetrics(line->font()).horizontalAdvance(text) + 8); }
+
+void Preferences::RenameLable(Section section)
+{
+    switch (section) {
+    case Section::kFinance:
+        ui->label->setText(tr("Base Currency"));
+        ui->label_9->setText(tr("FXRate Decimal"));
+        break;
+    case Section::kNetwork:
+        ui->page_2->hide();
+        ui->listWidget->setRowHidden(1, true);
+        ui->groupBox_2->hide();
+        break;
+    case Section::kTask:
+    case Section::kProduct:
+        ui->label_8->setText(tr("Amount Decimal"));
+        ui->label_9->setText(tr("Price Decimal"));
+        break;
+    default:
+        break;
+    }
+}
 
 void Preferences::on_comboStatic_activated(int index) { section_rule_.static_node = ui->comboStatic->itemData(index).toInt(); }
 

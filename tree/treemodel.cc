@@ -8,12 +8,11 @@
 #include "component/enumclass.h"
 #include "global/nodepool.h"
 
-TreeModel::TreeModel(
-    const TreeInfo* info, TreeSql* sql, const SectionRule* section_rule, const ViewHash* sectioon_view, const Interface* interface, QObject* parent)
+TreeModel::TreeModel(const Info* info, TreeSql* sql, const SectionRule* section_rule, const ViewHash* section_view, const Interface* interface, QObject* parent)
     : QAbstractItemModel { parent }
     , info_ { info }
     , section_rule_ { section_rule }
-    , section_view_ { sectioon_view }
+    , section_view_ { section_view }
     , interface_ { interface }
     , sql_ { sql }
 {
@@ -33,6 +32,8 @@ void TreeModel::UpdateNode(const Node* tmp_node)
         return;
 
     auto node { node_hash_.value(tmp_node->id) };
+    UpdateRatio(node, tmp_node->ratio);
+
     if (*node == *tmp_node)
         return;
 
@@ -293,26 +294,32 @@ QVariant TreeModel::data(const QModelIndex& index, int role) const
     if (node == root_)
         return QVariant();
 
-    const NodeColumn kColumn { index.column() };
+    const TreeColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case NodeColumn::kName:
+    case TreeColumn::kName:
         return node->name;
-    case NodeColumn::kID:
+    case TreeColumn::kID:
         return node->id;
-    case NodeColumn::kCode:
+    case TreeColumn::kCode:
         return node->code;
-    case NodeColumn::kDescription:
+    case TreeColumn::kDescription:
         return node->description;
-    case NodeColumn::kNote:
+    case TreeColumn::kRatio:
+        return node->ratio == 0 ? QVariant() : node->ratio;
+    case TreeColumn::kExtension:
+        return node->extension == 0 ? QVariant() : node->extension;
+    case TreeColumn::kDeadline:
+        return node->deadline;
+    case TreeColumn::kNote:
         return node->note;
-    case NodeColumn::kNodeRule:
+    case TreeColumn::kNodeRule:
         return node->node_rule;
-    case NodeColumn::kBranch:
+    case TreeColumn::kBranch:
         return node->branch;
-    case NodeColumn::kUnit:
+    case TreeColumn::kUnit:
         return node->unit;
-    case NodeColumn::kTotal:
+    case TreeColumn::kTotal:
         return node->unit == section_rule_->base_unit ? node->base_total : node->foreign_total;
     default:
         return QVariant();
@@ -328,25 +335,34 @@ bool TreeModel::setData(const QModelIndex& index, const QVariant& value, int rol
     if (node == root_)
         return false;
 
-    const NodeColumn kColumn { index.column() };
+    const TreeColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case NodeColumn::kDescription:
+    case TreeColumn::kDescription:
         UpdateDescription(node, value.toString());
         break;
-    case NodeColumn::kNote:
+    case TreeColumn::kNote:
         UpdateNote(node, value.toString());
         break;
-    case NodeColumn::kCode:
+    case TreeColumn::kCode:
         UpdateCode(node, value.toString());
         break;
-    case NodeColumn::kNodeRule:
+    case TreeColumn::kRatio:
+        UpdateRatio(node, value.toDouble());
+        break;
+    case TreeColumn::kExtension:
+        UpdateExtension(node, value.toInt());
+        break;
+    case TreeColumn::kDeadline:
+        UpdateDeadline(node, value.toString());
+        break;
+    case TreeColumn::kNodeRule:
         UpdateRule(node, value.toBool());
         break;
-    case NodeColumn::kUnit:
+    case TreeColumn::kUnit:
         UpdateUnit(node, value.toInt());
         break;
-    case NodeColumn::kBranch:
+    case TreeColumn::kBranch:
         UpdateBranch(node, value.toBool());
         break;
     default:
@@ -409,9 +425,42 @@ bool TreeModel::UpdateName(Node* node, CString& value)
     sql_->Update(NAME, value, node->id);
 
     UpdatePath(node);
-    emit SResizeColumnToContents(static_cast<int>(NodeColumn::kName));
+    emit SResizeColumnToContents(std::to_underlying(TreeColumn::kName));
     emit SSearch();
     emit SUpdateName(node);
+    return true;
+}
+
+bool TreeModel::UpdateRatio(Node* node, double value)
+{
+    const double tolerance { std::pow(10, -section_rule_->ratio_decimal - 2) };
+
+    if (std::abs(node->ratio - value) <= tolerance)
+        return false;
+
+    node->ratio = value;
+    sql_->Update(RATIO, value, node->id);
+
+    return true;
+}
+
+bool TreeModel::UpdateExtension(Node* node, int value)
+{
+    if (node->extension == value)
+        return false;
+
+    node->extension = value;
+    sql_->Update(EXTENSION, value, node->id);
+    return true;
+}
+
+bool TreeModel::UpdateDeadline(Node* node, CString& value)
+{
+    if (node->deadline == value)
+        return false;
+
+    node->deadline = value;
+    sql_->Update(DEADLINE, value, node->id);
     return true;
 }
 
@@ -469,32 +518,32 @@ bool TreeModel::UpdateCode(Node* node, CString& value)
 int TreeModel::columnCount(const QModelIndex& parent) const
 {
     Q_UNUSED(parent);
-    return info_->header.size();
+    return info_->tree_header.size();
 }
 
 void TreeModel::sort(int column, Qt::SortOrder order)
 {
-    if (column <= -1 || column >= info_->header.size())
+    if (column <= -1 || column >= info_->tree_header.size())
         return;
 
     auto Compare = [column, order](const Node* lhs, const Node* rhs) -> bool {
-        const NodeColumn kColumn { column };
+        const TreeColumn kColumn { column };
         switch (kColumn) {
-        case NodeColumn::kName:
+        case TreeColumn::kName:
             return (order == Qt::AscendingOrder) ? (lhs->name < rhs->name) : (lhs->name > rhs->name);
-        case NodeColumn::kCode:
+        case TreeColumn::kCode:
             return (order == Qt::AscendingOrder) ? (lhs->code < rhs->code) : (lhs->code > rhs->code);
-        case NodeColumn::kDescription:
+        case TreeColumn::kDescription:
             return (order == Qt::AscendingOrder) ? (lhs->description < rhs->description) : (lhs->description > rhs->description);
-        case NodeColumn::kNote:
+        case TreeColumn::kNote:
             return (order == Qt::AscendingOrder) ? (lhs->note < rhs->note) : (lhs->note > rhs->note);
-        case NodeColumn::kNodeRule:
+        case TreeColumn::kNodeRule:
             return (order == Qt::AscendingOrder) ? (lhs->node_rule < rhs->node_rule) : (lhs->node_rule > rhs->node_rule);
-        case NodeColumn::kBranch:
+        case TreeColumn::kBranch:
             return (order == Qt::AscendingOrder) ? (lhs->branch < rhs->branch) : (lhs->branch > rhs->branch);
-        case NodeColumn::kUnit:
+        case TreeColumn::kUnit:
             return (order == Qt::AscendingOrder) ? (lhs->unit < rhs->unit) : (lhs->unit > rhs->unit);
-        case NodeColumn::kTotal:
+        case TreeColumn::kTotal:
             return (order == Qt::AscendingOrder) ? (lhs->base_total < rhs->base_total) : (lhs->base_total > rhs->base_total);
         default:
             return false;
@@ -506,7 +555,7 @@ void TreeModel::sort(int column, Qt::SortOrder order)
     emit layoutChanged();
 }
 
-void TreeModel::SortIterative(Node* node, const auto& Compare)
+void TreeModel::SortIterative(Node* node, std::function<bool(const Node*, const Node*)> Compare)
 {
     if (!node)
         return;
@@ -622,7 +671,7 @@ bool TreeModel::RemoveRow(int row, const QModelIndex& parent)
     }
 
     emit SSearch();
-    emit SResizeColumnToContents(static_cast<int>(NodeColumn::kName));
+    emit SResizeColumnToContents(std::to_underlying(TreeColumn::kName));
 
     NodePool::Instance().Recycle(node);
     node_hash_.remove(node_id);
@@ -633,7 +682,7 @@ bool TreeModel::RemoveRow(int row, const QModelIndex& parent)
 QVariant TreeModel::headerData(int section, Qt::Orientation orientation, int role) const
 {
     if (orientation == Qt::Horizontal && role == Qt::DisplayRole)
-        return info_->header.at(section);
+        return info_->tree_header.at(section);
 
     return QVariant();
 }
@@ -644,30 +693,18 @@ Qt::ItemFlags TreeModel::flags(const QModelIndex& index) const
         return Qt::NoItemFlags;
 
     auto flags { QAbstractItemModel::flags(index) };
-    const NodeColumn kColumn { index.column() };
+    const TreeColumn kColumn { index.column() };
 
     switch (kColumn) {
-    case NodeColumn::kName:
+    case TreeColumn::kName:
         flags |= Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled;
+        flags &= ~Qt::ItemIsEditable;
         break;
-    case NodeColumn::kCode:
-        flags |= Qt::ItemIsEditable;
+    case TreeColumn::kTotal:
+        flags &= ~Qt::ItemIsEditable;
         break;
-    case NodeColumn::kDescription:
-        flags |= Qt::ItemIsEditable;
-        break;
-    case NodeColumn::kNote:
-        flags |= Qt::ItemIsEditable;
-        break;
-    case NodeColumn::kNodeRule:
-        flags |= Qt::ItemIsEditable;
-        break;
-    case NodeColumn::kBranch:
-        flags |= Qt::ItemIsEditable;
-        break;
-    case NodeColumn::kUnit:
-        flags |= Qt::ItemIsEditable;
     default:
+        flags |= Qt::ItemIsEditable;
         break;
     }
 
@@ -683,7 +720,7 @@ QMimeData* TreeModel::mimeData(const QModelIndexList& indexes) const
     auto first_index = indexes.first();
 
     if (first_index.isValid()) {
-        int id { first_index.sibling(first_index.row(), static_cast<int>(NodeColumn::kID)).data().toInt() };
+        int id { first_index.sibling(first_index.row(), std::to_underlying(TreeColumn::kID)).data().toInt() };
         mime_data->setData(NODEID, QByteArray::number(id));
     }
 
@@ -733,7 +770,7 @@ bool TreeModel::dropMimeData(const QMimeData* data, Qt::DropAction action, int r
 
     sql_->Drag(destination_parent->id, node_id);
     UpdatePath(node);
-    emit SResizeColumnToContents(static_cast<int>(NodeColumn::kName));
+    emit SResizeColumnToContents(std::to_underlying(TreeColumn::kName));
     emit SSearch();
     emit SUpdateName(node);
 
